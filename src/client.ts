@@ -22,11 +22,16 @@ import type {
   GetAuditLogOptions,
   FeedResponse,
   GetFeedOptions,
+  StreamFeedOptions,
+  SSEEvent,
   Webhook,
   WebhookCreateResult,
   CreateWebhookParams,
   BatchMarketItem,
   BatchResult,
+  DepositInfo,
+  DepositResult,
+  ApprovalStatus,
 } from "./types.js";
 
 // ─── Helpers ───────────────────────────────────────────────────
@@ -290,6 +295,18 @@ export class FlipCoin {
     });
   }
 
+  /**
+   * Check ShareToken approval status for selling shares.
+   *
+   * Before selling via LMSR or CLOB, the owner must approve the operator contract
+   * (BackstopRouter for LMSR, Exchange for CLOB) for ERC-1155 transfers.
+   */
+  async getApprovalStatus(conditionId: string): Promise<ApprovalStatus> {
+    return this.request("GET", "/api/agent/trade/approve", {
+      params: { conditionId },
+    });
+  }
+
   // ── CLOB Orders (Exchange) ─────────────────────────────────
 
   /**
@@ -332,18 +349,35 @@ export class FlipCoin {
     });
   }
 
-  /** List your CLOB orders */
+  /**
+   * List your CLOB orders.
+   *
+   * Note: `status=open` includes `partially_filled` orders (both are active on the book).
+   * Use `status=partially_filled` to see only orders with partial fills (includes cancelled IOC with fills).
+   */
   async getOrders(
-    status?: "open" | "filled" | "cancelled" | "all",
+    status?: "open" | "partially_filled" | "filled" | "cancelled" | "all",
   ): Promise<{ orders: Order[] }> {
     const params: Record<string, string> = {};
     if (status) params.status = status;
     return this.request("GET", "/api/agent/orders", { params });
   }
 
-  /** Cancel a CLOB order */
+  /** Cancel a single CLOB order by hash */
   async cancelOrder(orderHash: string): Promise<{ success: boolean }> {
     return this.request("DELETE", `/api/agent/orders/${orderHash}`);
+  }
+
+  /**
+   * Cancel all open orders via nonce bump.
+   *
+   * Increments the on-chain nonce, invalidating all outstanding orders
+   * in a single transaction. More efficient than cancelling individually.
+   */
+  async cancelAllOrders(): Promise<{ success: boolean }> {
+    return this.request("DELETE", "/api/agent/orders/all", {
+      params: { cancelAll: "true" },
+    });
   }
 
   // ── Portfolio ──────────────────────────────────────────────
@@ -399,6 +433,132 @@ export class FlipCoin {
     if (options.types) params.types = options.types;
     if (options.limit) params.limit = String(options.limit);
     return this.request("GET", "/api/agent/feed", { params });
+  }
+
+  // ── Vault Deposits ──────────────────────────────────────────
+
+  /**
+   * Get vault balance, wallet balance, allowance, and recent deposits.
+   */
+  async getDepositInfo(): Promise<DepositInfo> {
+    return this.request("GET", "/api/agent/vault/deposit");
+  }
+
+  /**
+   * Deposit USDC to VaultV2 via DepositRouter.
+   *
+   * Requires USDC approval to DepositRouter address and on-chain delegation.
+   * Limits: min $1, max $10,000, auto-sign max $500.
+   *
+   * @param amount         USDC amount (human-readable, e.g. 100 = $100)
+   * @param options.targetBalance  If true, `amount` is treated as the target vault balance
+   *                               (deposits only the difference needed)
+   */
+  async deposit(
+    amount: number,
+    options?: { targetBalance?: boolean },
+  ): Promise<DepositResult> {
+    const body: Record<string, unknown> = { action: "intent" };
+    if (options?.targetBalance) {
+      body.targetBalance = usdcToRaw(amount);
+    } else {
+      body.amount = usdcToRaw(amount);
+    }
+
+    // Step 1: Create intent
+    const intent = await this.request<{ intentId: string }>(
+      "POST",
+      "/api/agent/vault/deposit",
+      {
+        body,
+        headers: {
+          "X-Idempotency-Key": idempotencyKey("deposit"),
+        },
+      },
+    );
+
+    // Step 2: Relay (auto_sign)
+    return this.request("POST", "/api/agent/vault/deposit", {
+      body: {
+        action: "relay",
+        intentId: intent.intentId,
+        auto_sign: true,
+      },
+    });
+  }
+
+  // ── SSE Real-Time Stream ───────────────────────────────────
+
+  /**
+   * Open an authenticated SSE stream for real-time events.
+   *
+   * Channels: "orderbook:{conditionId}", "trades:{conditionId}", "prices:{conditionId}"
+   * Max connection: 5 minutes (reconnect on close).
+   *
+   * Returns an async iterable of SSE events.
+   */
+  async *streamFeed(options: StreamFeedOptions): AsyncGenerator<SSEEvent> {
+    const url = new URL("/api/agent/feed/stream", this.baseUrl);
+    if (options.channels) {
+      url.searchParams.set("channels", options.channels.join(","));
+    }
+
+    const res = await fetch(url.toString(), {
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+        Accept: "text/event-stream",
+      },
+    });
+
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ message: res.statusText }));
+      throw new FlipCoinError(
+        res.status,
+        error.error || error.message || "SSE connection failed",
+        error,
+      );
+    }
+
+    if (!res.body) throw new Error("No response body for SSE stream");
+
+    const decoder = new TextDecoder();
+    const reader = res.body.getReader();
+    let buffer = "";
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        let eventType = "";
+        let eventData = "";
+
+        for (const line of lines) {
+          if (line.startsWith("event: ")) {
+            eventType = line.slice(7).trim();
+          } else if (line.startsWith("data: ")) {
+            eventData = line.slice(6).trim();
+          } else if (line === "" && eventData) {
+            try {
+              yield {
+                type: eventType || "message",
+                data: JSON.parse(eventData),
+              };
+            } catch {
+              // skip non-JSON data (heartbeats, comments)
+            }
+            eventType = "";
+            eventData = "";
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
   }
 
   // ── Webhooks ───────────────────────────────────────────────

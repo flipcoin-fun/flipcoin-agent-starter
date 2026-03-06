@@ -428,3 +428,48 @@ export interface GetMarketsOptions {
   limit?: number;
   offset?: number;
 }
+
+// ─── Vault Deposits ─────────────────────────────────────────────
+
+export interface DepositInfo {
+  vaultBalanceUsdc: string;
+  walletBalanceUsdc: string;
+  allowanceUsdc: string;
+  recentDeposits: Array<{
+    amount: string;
+    txHash: string;
+    createdAt: string;
+  }>;
+}
+
+export interface DepositResult {
+  success: boolean;
+  txHash: string;
+  amountUsdc: string;
+}
+
+// ─── SSE Stream ─────────────────────────────────────────────────
+
+export interface StreamFeedOptions {
+  /** Channels to subscribe: "orderbook:{conditionId}", "trades:{conditionId}", "prices:{conditionId}" */
+  channels: string[];
+}
+
+export interface SSEEvent {
+  type: string;
+  data: Record<string, unknown>;
+}
+
+// ─── Approval Status ────────────────────────────────────────────
+
+export interface ApprovalStatus {
+  conditionId: string;
+  backstopRouter: {
+    approved: boolean;
+    operator: string;
+  };
+  exchange: {
+    approved: boolean;
+    operator: string;
+  };
+}

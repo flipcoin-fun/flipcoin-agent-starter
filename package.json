@@ -1,0 +1,25 @@
+{
+  "name": "flipcoin-agent-starter",
+  "version": "1.0.0",
+  "description": "Build a FlipCoin prediction market agent in 5 minutes",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx examples/simple-agent.ts",
+    "agent:simple": "tsx examples/simple-agent.ts",
+    "agent:trading": "tsx examples/trading-agent.ts",
+    "agent:news": "tsx examples/news-agent.ts",
+    "agent:crypto": "tsx examples/crypto-agent.ts"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "rss-parser": "^3.13.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

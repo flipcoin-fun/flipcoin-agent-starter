@@ -161,6 +161,225 @@ export interface Position {
   gainLossPercent: number;
 }
 
+// ─── Market State ──────────────────────────────────────────────
+
+export interface SlippageCurveEntry {
+  amountUsdc: number;
+  baselinePriceYesBps: number;
+  postTradePriceYesBps: number;
+  priceImpactBps: number;
+  avgFillPriceExFeeBps: number;
+  avgFillPriceInclFeeBps: number;
+  sharesOut: string;
+}
+
+export interface MarketState {
+  schemaVersion: string;
+  units: {
+    usdc: string;
+    shares: string;
+    bps: string;
+    q: string;
+  };
+  market: string;
+  conditionId: string | null;
+  lmsrState: {
+    bRaw: string;
+    b: string;
+    qYesRaw: string;
+    qYes: string;
+    qNoRaw: string;
+    qNo: string;
+    feeBps: number;
+    priceYesBps: number;
+    priceNoBps: number;
+    yesSharesTotal: string;
+    noSharesTotal: string;
+  };
+  analytics: {
+    skew: string;
+    stateImbalance: string;
+    maxLossUsdc: string;
+  };
+  slippageCurve: {
+    buyYes: SlippageCurveEntry[];
+    buyNo: SlippageCurveEntry[];
+  };
+}
+
+// ─── Market History ────────────────────────────────────────────
+
+export interface HistoryPointRaw {
+  timestamp: string;
+  priceYesBps: number;
+  blockNumber: number;
+  volumeUsdc?: number;
+}
+
+export interface HistoryPointOHLC {
+  timestampStart: string;
+  priceYesBpsOpen: number;
+  priceYesBpsHigh: number;
+  priceYesBpsLow: number;
+  priceYesBpsClose: number;
+  volumeUsdc?: number;
+  tradesCount?: number;
+}
+
+export interface MarketHistoryResponse {
+  history: HistoryPointRaw[] | HistoryPointOHLC[];
+  interval?: string;
+}
+
+export interface GetHistoryOptions {
+  interval?: "raw" | "1m" | "5m" | "1h" | "1d";
+  from?: string;
+  to?: string;
+  includeVolume?: boolean;
+  limit?: number;
+}
+
+// ─── Performance ───────────────────────────────────────────────
+
+export interface PerformanceResponse {
+  period: string;
+  volumeDefinition: string;
+  creatorStats: {
+    marketsCreated: number;
+    marketsResolved: number;
+    totalVolumeUsdc: string;
+    avgVolumePerMarket: string;
+    creatorFeesEarnedUsdc: string;
+    volumeBySource: {
+      backstop: string;
+      clob: string;
+    };
+  };
+  byCategory: Array<{
+    category: string;
+    volumeUsdc: string;
+    feesEarnedUsdc: string;
+    markets: number;
+    trades: number;
+  }>;
+  byMarket: Array<{
+    marketAddr: string;
+    title: string;
+    volumeUsdc: string;
+    feesEarnedUsdc: string;
+    trades: number;
+  }>;
+  activity: {
+    totalTrades: number;
+    avgTradeSizeUsdc: string;
+    totalFeesUsdc: string;
+  };
+}
+
+// ─── Audit Log ─────────────────────────────────────────────────
+
+export interface AuditLogEntry {
+  id: string;
+  eventType: string;
+  eventData: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface AuditLogResponse {
+  entries: AuditLogEntry[];
+  pagination: {
+    offset: number;
+    limit: number;
+    total: number;
+    hasMore: boolean;
+  };
+}
+
+export interface GetAuditLogOptions {
+  limit?: number;
+  offset?: number;
+  eventType?: string;
+  since?: string;
+  before?: string;
+}
+
+// ─── Feed ──────────────────────────────────────────────────────
+
+export interface FeedEvent {
+  type: string;
+  timestamp: string;
+  data: {
+    marketAddr: string | null;
+    title: string;
+    txHash: string | null;
+    [key: string]: unknown;
+  };
+}
+
+export interface FeedResponse {
+  events: FeedEvent[];
+  cursor: string;
+  hasMore: boolean;
+}
+
+export interface GetFeedOptions {
+  since: string;
+  types?: string;
+  limit?: number;
+}
+
+// ─── Webhooks ──────────────────────────────────────────────────
+
+export interface Webhook {
+  id: string;
+  url: string;
+  eventTypes: string[];
+  isActive: boolean;
+  createdAt: string;
+  lastDeliveryAt?: string | null;
+  lastDeliveryStatus?: string | null;
+  consecutiveFailures?: number;
+}
+
+export interface WebhookCreateResult {
+  webhook: Webhook & { secret: string };
+  message: string;
+}
+
+export interface CreateWebhookParams {
+  url: string;
+  eventTypes: string[];
+}
+
+// ─── Batch Markets ─────────────────────────────────────────────
+
+export interface BatchMarketItem {
+  title: string;
+  resolutionCriteria: string;
+  resolutionSource: string;
+  description?: string;
+  category?: string;
+  resolveEndAt?: string;
+  liquidityTier?: "low" | "medium" | "high";
+  initialPriceYesBps?: number;
+  metadata?: Record<string, unknown>;
+}
+
+export interface BatchResult {
+  success: boolean;
+  results: Array<{
+    index: number;
+    status: "pending" | "error";
+    requestId?: string;
+    error?: { code: string; message: string };
+  }>;
+  summary: {
+    total: number;
+    pending: number;
+    errors: number;
+  };
+}
+
 // ─── Responses ──────────────────────────────────────────────────
 
 export interface PingResponse {

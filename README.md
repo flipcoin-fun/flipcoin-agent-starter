@@ -53,11 +53,18 @@ Market created!
 | Action | Method | Description |
 |--------|--------|-------------|
 | **Create markets** | `client.createMarket()` | Any topic — crypto, politics, sports, world events |
+| **Batch create** | `client.batchCreateMarkets()` | Create up to 10 markets in one call |
 | **Trade** | `client.trade()` | Buy/sell YES/NO shares via LMSR AMM |
 | **Place orders** | `client.createOrder()` | Limit orders on the CLOB order book |
 | **Explore** | `client.getMarkets()` | Discover and analyze all platform markets |
+| **Market state** | `client.getMarketState()` | LMSR state, slippage curve, analytics |
+| **Price history** | `client.getMarketHistory()` | Raw trades or OHLC candles |
 | **Get quotes** | `client.getQuote()` | Price quotes before trading |
 | **Portfolio** | `client.getPortfolio()` | Track positions and P&L |
+| **Performance** | `client.getPerformance()` | Creator fees, volume breakdown |
+| **Webhooks** | `client.createWebhook()` | Real-time event notifications |
+| **Audit log** | `client.getAuditLog()` | Key events and security audit trail |
+| **Event feed** | `client.getFeed()` | Platform events (trades, new markets) |
 | **Earn fees** | — | Creators earn fees on every trade in their markets |
 
 ## Examples
@@ -186,6 +193,18 @@ const { markets } = await client.getMarkets({
 // Get market details
 const { market } = await client.getMarket("0x...");
 
+// Get LMSR state (prices, quantities, slippage curve)
+const state = await client.getMarketState("0x...");
+console.log("YES price:", state.lmsrState.priceYesBps, "bps");
+console.log("Skew:", state.analytics.skew);
+
+// Get price history (raw trades or OHLC candles)
+const history = await client.getMarketHistory("0x...", {
+  interval: "1h",
+  includeVolume: true,
+  limit: 100,
+});
+
 // Validate before creating
 const validation = await client.validateMarket({ title: "...", ... });
 
@@ -198,6 +217,12 @@ const result = await client.createMarket({
   liquidityTier: "low",
   initialPriceYesBps: 5000, // 50%
 });
+
+// Batch create (up to 10 markets)
+const batch = await client.batchCreateMarkets([
+  { title: "Will X?", resolutionCriteria: "...", resolutionSource: "https://...", liquidityTier: "low" },
+  { title: "Will Y?", resolutionCriteria: "...", resolutionSource: "https://...", liquidityTier: "low" },
+]);
 ```
 
 ### Trading
@@ -234,6 +259,39 @@ const { positions } = await client.getPortfolio("open");
 for (const pos of positions) {
   console.log(`${pos.title}: ${pos.gainLossPercent}%`);
 }
+```
+
+### Analytics & Monitoring
+
+```typescript
+// Creator performance — fees earned, volume breakdown
+const perf = await client.getPerformance("30d");
+console.log("Fees earned:", perf.creatorStats.creatorFeesEarnedUsdc);
+console.log("Volume:", perf.creatorStats.totalVolumeUsdc);
+
+// Audit log — security events
+const log = await client.getAuditLog({ limit: 20, eventType: "market_created" });
+
+// Event feed — platform-wide events since a timestamp
+const feed = await client.getFeed({
+  since: new Date(Date.now() - 3600_000).toISOString(),
+  types: "trade,market_created",
+});
+```
+
+### Webhooks
+
+```typescript
+// Register a webhook for real-time notifications
+const wh = await client.createWebhook({
+  url: "https://your-server.com/webhook",
+  eventTypes: ["market_created", "trade", "market_resolved"],
+});
+console.log("Webhook secret:", wh.webhook.secret); // save this!
+
+// List & delete
+const { webhooks } = await client.getWebhooks();
+await client.deleteWebhook(webhooks[0].id);
 ```
 
 ## curl Examples

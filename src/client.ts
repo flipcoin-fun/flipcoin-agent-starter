@@ -14,6 +14,19 @@ import type {
   ConfigResponse,
   ExploreResponse,
   GetMarketsOptions,
+  MarketState,
+  MarketHistoryResponse,
+  GetHistoryOptions,
+  PerformanceResponse,
+  AuditLogResponse,
+  GetAuditLogOptions,
+  FeedResponse,
+  GetFeedOptions,
+  Webhook,
+  WebhookCreateResult,
+  CreateWebhookParams,
+  BatchMarketItem,
+  BatchResult,
 } from "./types.js";
 
 // ─── Helpers ───────────────────────────────────────────────────
@@ -134,6 +147,37 @@ export class FlipCoin {
     return this.request("GET", `/api/agent/markets/${address}`);
   }
 
+  /**
+   * Get LMSR state — prices, quantities, slippage curve.
+   *
+   * Returns raw on-chain LMSR parameters, analytics (skew, max loss),
+   * and a pre-computed slippage curve for common trade sizes.
+   */
+  async getMarketState(address: string): Promise<MarketState> {
+    return this.request("GET", `/api/agent/markets/${address}/state`);
+  }
+
+  /**
+   * Get price history for a market.
+   *
+   * @param address  Market contract address
+   * @param options  interval ("raw"|"1m"|"5m"|"1h"|"1d"), from/to dates, includeVolume, limit
+   */
+  async getMarketHistory(
+    address: string,
+    options?: GetHistoryOptions,
+  ): Promise<MarketHistoryResponse> {
+    const params: Record<string, string> = {};
+    if (options?.interval) params.interval = options.interval;
+    if (options?.from) params.from = options.from;
+    if (options?.to) params.to = options.to;
+    if (options?.includeVolume) params.includeVolume = "true";
+    if (options?.limit) params.limit = String(options.limit);
+    return this.request("GET", `/api/agent/markets/${address}/history`, {
+      params,
+    });
+  }
+
   /** Validate market params before creating (no records created) */
   async validateMarket(params: CreateMarketParams): Promise<ValidateResult> {
     return this.request("POST", "/api/agent/markets/validate", {
@@ -160,6 +204,21 @@ export class FlipCoin {
       params: queryParams,
       headers: {
         "X-Idempotency-Key": idempotencyKey("market"),
+      },
+    });
+  }
+
+  /**
+   * Create multiple markets in a single request.
+   *
+   * Returns EIP-712 typed data for manual signing (batch does not support auto_sign).
+   * Max 10 markets per batch.
+   */
+  async batchCreateMarkets(markets: BatchMarketItem[]): Promise<BatchResult> {
+    return this.request("POST", "/api/agent/markets/batch", {
+      body: { markets },
+      headers: {
+        "X-Idempotency-Key": idempotencyKey("batch"),
       },
     });
   }
@@ -274,7 +333,9 @@ export class FlipCoin {
   }
 
   /** List your CLOB orders */
-  async getOrders(status?: "open" | "filled" | "cancelled" | "all"): Promise<{ orders: Order[] }> {
+  async getOrders(
+    status?: "open" | "filled" | "cancelled" | "all",
+  ): Promise<{ orders: Order[] }> {
     const params: Record<string, string> = {};
     if (status) params.status = status;
     return this.request("GET", "/api/agent/orders", { params });
@@ -288,9 +349,76 @@ export class FlipCoin {
   // ── Portfolio ──────────────────────────────────────────────
 
   /** Get your open/closed positions */
-  async getPortfolio(status?: "open" | "closed" | "all"): Promise<{ positions: Position[] }> {
+  async getPortfolio(
+    status?: "open" | "closed" | "all",
+  ): Promise<{ positions: Position[] }> {
     const params: Record<string, string> = {};
     if (status) params.status = status;
     return this.request("GET", "/api/agent/portfolio", { params });
+  }
+
+  // ── Analytics & Monitoring ─────────────────────────────────
+
+  /**
+   * Creator performance — volume, fees, breakdown by category and market.
+   *
+   * @param period  "7d" | "30d" | "90d" | "all" (default: "30d")
+   */
+  async getPerformance(
+    period?: "7d" | "30d" | "90d" | "all",
+  ): Promise<PerformanceResponse> {
+    const params: Record<string, string> = {};
+    if (period) params.period = period;
+    return this.request("GET", "/api/agent/performance", { params });
+  }
+
+  /**
+   * Audit log — key events (creation, revocation, rate limits, etc.).
+   *
+   * @param options  limit, offset, eventType, since, before
+   */
+  async getAuditLog(options?: GetAuditLogOptions): Promise<AuditLogResponse> {
+    const params: Record<string, string> = {};
+    if (options?.limit) params.limit = String(options.limit);
+    if (options?.offset) params.offset = String(options.offset);
+    if (options?.eventType) params.event_type = options.eventType;
+    if (options?.since) params.since = options.since;
+    if (options?.before) params.before = options.before;
+    return this.request("GET", "/api/agent/audit-log", { params });
+  }
+
+  /**
+   * Event feed — platform events (market_created, trade, market_resolved).
+   *
+   * @param options.since  Required — ISO 8601 timestamp to fetch events after
+   * @param options.types  Comma-separated: "market_created,trade,market_resolved,resolution_proposed"
+   * @param options.limit  Max results (1-100, default 50)
+   */
+  async getFeed(options: GetFeedOptions): Promise<FeedResponse> {
+    const params: Record<string, string> = { since: options.since };
+    if (options.types) params.types = options.types;
+    if (options.limit) params.limit = String(options.limit);
+    return this.request("GET", "/api/agent/feed", { params });
+  }
+
+  // ── Webhooks ───────────────────────────────────────────────
+
+  /**
+   * Register a webhook to receive real-time event notifications.
+   *
+   * Returns a `secret` for verifying webhook signatures (shown only once).
+   */
+  async createWebhook(params: CreateWebhookParams): Promise<WebhookCreateResult> {
+    return this.request("POST", "/api/agent/webhooks", { body: params });
+  }
+
+  /** List all registered webhooks */
+  async getWebhooks(): Promise<{ webhooks: Webhook[] }> {
+    return this.request("GET", "/api/agent/webhooks");
+  }
+
+  /** Delete a webhook by ID */
+  async deleteWebhook(id: string): Promise<{ success: boolean }> {
+    return this.request("DELETE", `/api/agent/webhooks/${id}`);
   }
 }

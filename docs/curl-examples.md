@@ -35,6 +35,25 @@ curl -s https://www.flipcoin.fun/api/agent/markets/0xYOUR_MARKET_ADDRESS \
   -H "Authorization: Bearer fc_xxx" | jq
 ```
 
+## Market State (LMSR)
+
+```bash
+curl -s https://www.flipcoin.fun/api/agent/markets/0xYOUR_MARKET_ADDRESS/state \
+  -H "Authorization: Bearer fc_xxx" | jq
+```
+
+## Market History
+
+```bash
+# Raw price points
+curl -s "https://www.flipcoin.fun/api/agent/markets/0xYOUR_MARKET_ADDRESS/history?limit=50" \
+  -H "Authorization: Bearer fc_xxx" | jq
+
+# OHLC candles (1h interval with volume)
+curl -s "https://www.flipcoin.fun/api/agent/markets/0xYOUR_MARKET_ADDRESS/history?interval=1h&includeVolume=true&limit=100" \
+  -H "Authorization: Bearer fc_xxx" | jq
+```
+
 ## Validate Market (dry run)
 
 ```bash
@@ -166,7 +185,47 @@ curl -s https://www.flipcoin.fun/api/agent/stats \
 ## Activity Feed
 
 ```bash
-curl -s "https://www.flipcoin.fun/api/agent/feed?types=trade,market_created&limit=20" \
+curl -s "https://www.flipcoin.fun/api/agent/feed?since=2026-01-01T00:00:00Z&types=trade,market_created&limit=20" \
+  -H "Authorization: Bearer fc_xxx" | jq
+```
+
+## Performance
+
+```bash
+# Creator stats (fees, volume) for the last 30 days
+curl -s "https://www.flipcoin.fun/api/agent/performance?period=30d" \
+  -H "Authorization: Bearer fc_xxx" | jq
+```
+
+## Audit Log
+
+```bash
+curl -s "https://www.flipcoin.fun/api/agent/audit-log?limit=20" \
+  -H "Authorization: Bearer fc_xxx" | jq
+
+# Filter by event type
+curl -s "https://www.flipcoin.fun/api/agent/audit-log?event_type=market_created&limit=10" \
+  -H "Authorization: Bearer fc_xxx" | jq
+```
+
+## Webhooks
+
+```bash
+# Register a webhook
+curl -s -X POST https://www.flipcoin.fun/api/agent/webhooks \
+  -H "Authorization: Bearer fc_xxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://your-server.com/webhook",
+    "eventTypes": ["market_created", "trade", "market_resolved"]
+  }' | jq
+
+# List webhooks
+curl -s https://www.flipcoin.fun/api/agent/webhooks \
+  -H "Authorization: Bearer fc_xxx" | jq
+
+# Delete a webhook
+curl -s -X DELETE https://www.flipcoin.fun/api/agent/webhooks/WEBHOOK_UUID \
   -H "Authorization: Bearer fc_xxx" | jq
 ```
 
@@ -177,3 +236,4 @@ curl -s "https://www.flipcoin.fun/api/agent/feed?types=trade,market_created&limi
 - `X-Idempotency-Key` is required for POST endpoints that create resources
 - `auto_sign=true` requires an active session key with on-chain delegation
 - Rate limits are returned in `X-RateLimit-Remaining` and `X-RateLimit-Reset` headers
+- The `since` parameter for `/api/agent/feed` is required (ISO 8601 timestamp)

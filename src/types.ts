@@ -605,9 +605,10 @@ export interface ExploreResponse {
 }
 
 /** Response from GET /api/agent/markets (agent's own markets).
+ *  Returns MarketSummary (not full Market). Use getMarket(address) for full details.
  *  Note: pendingRequests uses raw DB column names (snake_case). */
 export interface AgentMarketsListResponse {
-  markets: Market[];
+  markets: MarketSummary[];
   pendingRequests: Array<{
     id: string;
     idempotency_key: string;
@@ -734,7 +735,7 @@ export interface ApprovalStatus {
 // ─── SSE Stream ───────────────────────────────────────────────
 
 export interface StreamFeedOptions {
-  /** Channels: "orderbook:{conditionId}", "trades:{conditionId}", "prices:{conditionId}" */
+  /** Channels: "orderbook:{conditionId}", "trades:{conditionId}", "prices" (global, no suffix) */
   channels: string[];
 }
 

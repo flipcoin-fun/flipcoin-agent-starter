@@ -233,7 +233,7 @@ curl -s -X DELETE https://www.flipcoin.fun/api/agent/orders/0xYOUR_ORDER_HASH \
 
 ```bash
 # Invalidates ALL open orders in a single transaction
-curl -s -X DELETE "https://www.flipcoin.fun/api/agent/orders/_all?cancelAll=true" \
+curl -s -X DELETE "https://www.flipcoin.fun/api/agent/orders/0x0000000000000000000000000000000000000000000000000000000000000000?cancelAll=true" \
   -H "Authorization: Bearer fc_xxx" | jq
 ```
 
@@ -400,7 +400,6 @@ curl -s -X DELETE https://www.flipcoin.fun/api/agent/webhooks/WEBHOOK_UUID \
 | `PRICE_IMPACT_EXCEEDED` | 400 | Trade would move price >30% |
 | `SHARE_TOKEN_NOT_APPROVED` | 400 | Call `setApprovalForAll()` before selling |
 | `ORDER_TOO_SMALL` | 400 | Order below minimum size |
-| `INSUFFICIENT_VAULT_BALANCE` | 400 | Deposit more USDC to VaultV2 |
 | `NOT_DELEGATED` | 400 | Set up DelegationRegistry |
 | `DAILY_LIMIT_EXCEEDED` | 400 | Daily delegation spend limit hit |
 | `RELAY_NOT_CONFIGURED` | 503 | Use Mode A (manual signing) |

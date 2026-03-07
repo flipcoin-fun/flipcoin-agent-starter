@@ -444,6 +444,7 @@ export interface GetFeedOptions {
 
 // ─── Webhooks ─────────────────────────────────────────────────
 
+/** Webhook summary returned by GET /api/agent/webhooks (includes delivery stats) */
 export interface Webhook {
   id: string;
   url: string;
@@ -455,8 +456,19 @@ export interface Webhook {
   consecutiveFailures?: number;
 }
 
+/** Webhook returned by POST /api/agent/webhooks (creation — no delivery stats yet) */
+export interface WebhookCreated {
+  id: string;
+  url: string;
+  eventTypes: string[];
+  isActive: boolean;
+  createdAt: string;
+  /** Signing secret — shown only once on creation. Save it immediately. */
+  secret: string;
+}
+
 export interface WebhookCreateResult {
-  webhook: Webhook & { secret: string };
+  webhook: WebhookCreated;
   message: string;
 }
 

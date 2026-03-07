@@ -32,6 +32,7 @@ import type {
   BatchMarketItem,
   BatchResult,
   VaultBalanceResponse,
+  DepositIntentResponse,
   DepositResult,
   ApprovalStatus,
   TradeNonceResponse,
@@ -88,11 +89,11 @@ export class FlipCoin {
   constructor(config: { apiKey: string; baseUrl?: string }) {
     if (!config.apiKey) {
       throw new Error(
-        "API key is required. Get one at https://www.flipcoin.fun/agents",
+        "API key is required. Get one at https://flipcoin.fun/agents",
       );
     }
     this.apiKey = config.apiKey;
-    this.baseUrl = config.baseUrl || "https://www.flipcoin.fun";
+    this.baseUrl = config.baseUrl || "https://flipcoin.fun";
   }
 
   // ── Internal ───────────────────────────────────────────────
@@ -319,22 +320,21 @@ export class FlipCoin {
    *
    * @param params.conditionId   Market condition ID
    * @param params.side          "yes" or "no"
-   * @param params.action        "buy" (default) or "sell"
+   * @param params.action        "buy" or "sell"
    * @param params.amount        USDC amount for buy, shares for sell (human-readable)
    * @param params.maxSlippageBps  Max slippage (default: 100 = 1%)
    * @param params.maxFeeBps     Max fee in bps
    * @param params.venue         Execution venue (default: "auto")
    */
   async trade(params: TradeParams): Promise<TradeResult> {
-    const action = params.action || "buy";
     const rawAmount = usdcToRaw(params.amount);
 
     // Build intent body per OpenAPI spec
     const intentBody: Record<string, unknown> = {
       conditionId: params.conditionId,
       side: params.side,
-      action,
-      ...(action === "sell"
+      action: params.action,
+      ...(params.action === "sell"
         ? { sharesAmount: rawAmount }
         : { usdcAmount: rawAmount }),
     };
@@ -565,7 +565,7 @@ export class FlipCoin {
     }
 
     // Step 1: Create intent
-    const intent = await this.request<{ intentId: string }>(
+    const intent = await this.request<DepositIntentResponse>(
       "POST",
       "/api/agent/vault/deposit",
       {

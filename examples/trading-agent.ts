@@ -66,6 +66,7 @@ async function main() {
   const result = await client.trade({
     conditionId: market.conditionId!,
     side: "yes",
+    action: "buy",
     amount: 5, // $5
   });
 

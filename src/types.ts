@@ -72,7 +72,7 @@ export interface CreateMarketParams {
   imageUrl?: string;
   resolveStartAt?: string;
   resolveEndAt?: string;
-  liquidityTier?: "trial" | "low" | "medium" | "high";
+  liquidityTier?: "low" | "medium" | "high" | "trial";
   initialPriceYesBps?: number;
   metadata?: AgentMetadata;
 }
@@ -126,8 +126,8 @@ export interface TradeParams {
   conditionId: string;
   /** YES or NO */
   side: "yes" | "no";
-  /** buy or sell (default: buy) */
-  action?: "buy" | "sell";
+  /** buy or sell */
+  action: "buy" | "sell";
   /**
    * Amount in USDC for buy, shares for sell (human-readable, e.g. 10 = $10 or 10 shares).
    * Converted to base units (6 decimals) automatically.
@@ -453,7 +453,7 @@ export interface Webhook {
   createdAt: string;
   lastDeliveryAt?: string | null;
   lastDeliveryStatus?: string | null;
-  consecutiveFailures?: number;
+  consecutiveFailures: number;
 }
 
 /** Webhook returned by POST /api/agent/webhooks (creation — no delivery stats yet) */
@@ -651,7 +651,7 @@ export interface Pagination {
   offset: number;
   limit: number;
   total: number;
-  hasMore?: boolean;
+  hasMore: boolean;
 }
 
 export interface GetMarketsOptions {

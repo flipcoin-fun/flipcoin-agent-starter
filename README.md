@@ -291,7 +291,7 @@ for (const pos of positions) {
 
 ```typescript
 // Creator performance — fees earned, volume breakdown
-const perf = await client.getPerformance("30d");
+const perf = await client.getPerformance({ period: "30d" });
 console.log("Fees earned:", perf.feesEarned);
 console.log("Volume by source:", perf.volumeBySource);
 

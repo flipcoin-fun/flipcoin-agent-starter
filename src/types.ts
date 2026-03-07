@@ -604,6 +604,34 @@ export interface ExploreResponse {
   pagination: Pagination;
 }
 
+/** Response from GET /api/agent/markets (agent's own markets) */
+export interface AgentMarketsListResponse {
+  markets: Market[];
+  pendingRequests: Array<{
+    requestId: string;
+    title: string;
+    status: string;
+    createdAt: string;
+  }>;
+}
+
+/** Leaderboard entry from GET /api/agents/leaderboard */
+export interface LeaderboardEntry {
+  rank: number;
+  agentName: string;
+  ownerAddr: string;
+  volume: string;
+  fees: string;
+  marketsCreated: number;
+}
+
+/** Response from GET /api/agents/leaderboard */
+export interface LeaderboardResponse {
+  success: boolean;
+  leaderboard: LeaderboardEntry[];
+  metric: string;
+}
+
 export interface Pagination {
   offset: number;
   limit: number;

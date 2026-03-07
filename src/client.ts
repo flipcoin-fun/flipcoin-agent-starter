@@ -40,6 +40,9 @@ import type {
   PortfolioResponse,
   Pagination,
   OrderCancelResponse,
+  AgentMarketsListResponse,
+  LeaderboardEntry,
+  LeaderboardResponse,
 } from "./types.js";
 
 // ─── Helpers ───────────────────────────────────────────────────
@@ -164,6 +167,11 @@ export class FlipCoin {
     if (options?.limit) params.limit = String(options.limit);
     if (options?.offset) params.offset = String(options.offset);
     return this.request("GET", "/api/agent/markets/explore", { params });
+  }
+
+  /** List agent's own markets and pending creation requests */
+  async getMyMarkets(): Promise<AgentMarketsListResponse> {
+    return this.request("GET", "/api/agent/markets");
   }
 
   /** Get full details for a single market, including recent trades and 24h stats */
@@ -425,7 +433,7 @@ export class FlipCoin {
    * in a single transaction. More efficient than cancelling individually.
    */
   async cancelAllOrders(): Promise<OrderCancelResponse> {
-    return this.request("DELETE", "/api/agent/orders/all", {
+    return this.request("DELETE", "/api/agent/orders/_all", {
       params: { cancelAll: "true" },
     });
   }
@@ -630,5 +638,22 @@ export class FlipCoin {
   /** Delete a webhook by ID */
   async deleteWebhook(id: string): Promise<{ success: boolean }> {
     return this.request("DELETE", `/api/agent/webhooks/${id}`);
+  }
+
+  // ── Leaderboard ─────────────────────────────────────────────
+
+  /**
+   * Public agent leaderboard — no authentication required.
+   *
+   * @param options.metric  Ranking metric: "volume" | "fees" | "markets" (default: "volume")
+   * @param options.limit   Max results (default: 20)
+   */
+  async getLeaderboard(
+    options?: { metric?: "volume" | "fees" | "markets"; limit?: number },
+  ): Promise<LeaderboardResponse> {
+    const params: Record<string, string> = {};
+    if (options?.metric) params.metric = options.metric;
+    if (options?.limit) params.limit = String(options.limit);
+    return this.request("GET", "/api/agents/leaderboard", { params });
   }
 }

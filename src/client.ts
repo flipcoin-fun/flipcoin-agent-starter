@@ -260,20 +260,21 @@ export class FlipCoin {
    * @param conditionId  Market condition ID
    * @param side         "yes" or "no"
    * @param action       "buy" or "sell"
-   * @param shares       Number of shares (human-readable, e.g. 10 = 10 shares)
+   * @param amount       Number of shares (human-readable, e.g. 10 = 10 shares).
+   *                     Converted to base units (6 decimals) automatically.
    */
   async getQuote(
     conditionId: string,
     side: "yes" | "no",
     action: "buy" | "sell",
-    shares: number,
+    amount: number,
   ): Promise<QuoteResponse> {
     return this.request("GET", "/api/quote", {
       params: {
         conditionId,
         side,
         action,
-        amount: usdcToRaw(shares),
+        amount: usdcToRaw(amount),
       },
     });
   }

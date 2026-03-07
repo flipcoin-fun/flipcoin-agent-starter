@@ -464,9 +464,13 @@ export class FlipCoin {
    *
    * Increments the on-chain nonce, invalidating all outstanding orders
    * in a single transaction. More efficient than cancelling individually.
+   *
+   * Note: The API requires a valid bytes32 orderHash in the path even for mass cancel.
+   * A dummy zero-hash is used since it's ignored when cancelAll=true.
    */
   async cancelAllOrders(): Promise<OrderCancelResponse> {
-    return this.request("DELETE", "/api/agent/orders/_all", {
+    const dummyHash = "0x" + "0".repeat(64);
+    return this.request("DELETE", `/api/agent/orders/${dummyHash}`, {
       params: { cancelAll: "true" },
     });
   }

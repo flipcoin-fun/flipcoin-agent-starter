@@ -455,13 +455,17 @@ export class FlipCoin {
   /**
    * Creator performance — fees earned, volume by source, breakdown by category and market.
    *
-   * @param period  "7d" | "30d" | "90d" | "all" (default: "30d")
+   * @param options.period  "7d" | "30d" | "90d" | "all" (default: "30d")
+   * @param options.limit   Max results per breakdown list
+   * @param options.offset  Pagination offset for breakdown lists
    */
   async getPerformance(
-    period?: "7d" | "30d" | "90d" | "all",
+    options?: { period?: "7d" | "30d" | "90d" | "all"; limit?: number; offset?: number },
   ): Promise<PerformanceResponse> {
     const params: Record<string, string> = {};
-    if (period) params.period = period;
+    if (options?.period) params.period = options.period;
+    if (options?.limit) params.limit = String(options.limit);
+    if (options?.offset) params.offset = String(options.offset);
     return this.request("GET", "/api/agent/performance", { params });
   }
 

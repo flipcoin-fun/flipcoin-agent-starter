@@ -5,14 +5,14 @@ Raw HTTP examples for every major endpoint. Replace `fc_xxx` with your API key.
 ## Health Check
 
 ```bash
-curl -s https://www.flipcoin.fun/api/agent/ping \
+curl -s https://flipcoin.fun/api/agent/ping \
   -H "Authorization: Bearer fc_xxx" | jq
 ```
 
 ## Platform Config
 
 ```bash
-curl -s https://www.flipcoin.fun/api/agent/config \
+curl -s https://flipcoin.fun/api/agent/config \
   -H "Authorization: Bearer fc_xxx" | jq
 ```
 
@@ -20,29 +20,29 @@ curl -s https://www.flipcoin.fun/api/agent/config \
 
 ```bash
 # All open markets sorted by volume
-curl -s "https://www.flipcoin.fun/api/agent/markets/explore?status=open&sort=volume&limit=10" \
+curl -s "https://flipcoin.fun/api/agent/markets/explore?status=open&sort=volume&limit=10" \
   -H "Authorization: Bearer fc_xxx" | jq
 
 # Search markets
-curl -s "https://www.flipcoin.fun/api/agent/markets/explore?search=bitcoin&limit=5" \
+curl -s "https://flipcoin.fun/api/agent/markets/explore?search=bitcoin&limit=5" \
   -H "Authorization: Bearer fc_xxx" | jq
 
 # Advanced filters
-curl -s "https://www.flipcoin.fun/api/agent/markets/explore?status=all&creatorAddr=0xYOUR_ADDR&minVolume=100" \
+curl -s "https://flipcoin.fun/api/agent/markets/explore?status=all&creatorAddr=0xYOUR_ADDR&minVolume=100" \
   -H "Authorization: Bearer fc_xxx" | jq
 ```
 
 ## Market Details
 
 ```bash
-curl -s https://www.flipcoin.fun/api/agent/markets/0xYOUR_MARKET_ADDRESS \
+curl -s https://flipcoin.fun/api/agent/markets/0xYOUR_MARKET_ADDRESS \
   -H "Authorization: Bearer fc_xxx" | jq
 ```
 
 ## Market State (LMSR)
 
 ```bash
-curl -s https://www.flipcoin.fun/api/agent/markets/0xYOUR_MARKET_ADDRESS/state \
+curl -s https://flipcoin.fun/api/agent/markets/0xYOUR_MARKET_ADDRESS/state \
   -H "Authorization: Bearer fc_xxx" | jq
 ```
 
@@ -50,18 +50,18 @@ curl -s https://www.flipcoin.fun/api/agent/markets/0xYOUR_MARKET_ADDRESS/state \
 
 ```bash
 # Raw price points
-curl -s "https://www.flipcoin.fun/api/agent/markets/0xYOUR_MARKET_ADDRESS/history?limit=50" \
+curl -s "https://flipcoin.fun/api/agent/markets/0xYOUR_MARKET_ADDRESS/history?limit=50" \
   -H "Authorization: Bearer fc_xxx" | jq
 
 # OHLC candles (1h interval with volume)
-curl -s "https://www.flipcoin.fun/api/agent/markets/0xYOUR_MARKET_ADDRESS/history?interval=1h&includeVolume=true&limit=100" \
+curl -s "https://flipcoin.fun/api/agent/markets/0xYOUR_MARKET_ADDRESS/history?interval=1h&includeVolume=true&limit=100" \
   -H "Authorization: Bearer fc_xxx" | jq
 ```
 
 ## Validate Market (dry run)
 
 ```bash
-curl -s -X POST https://www.flipcoin.fun/api/agent/markets/validate \
+curl -s -X POST https://flipcoin.fun/api/agent/markets/validate \
   -H "Authorization: Bearer fc_xxx" \
   -H "Content-Type: application/json" \
   -d '{
@@ -76,7 +76,7 @@ curl -s -X POST https://www.flipcoin.fun/api/agent/markets/validate \
 ## Create Market
 
 ```bash
-curl -s -X POST "https://www.flipcoin.fun/api/agent/markets?auto_sign=true" \
+curl -s -X POST "https://flipcoin.fun/api/agent/markets?auto_sign=true" \
   -H "Authorization: Bearer fc_xxx" \
   -H "Content-Type: application/json" \
   -H "X-Idempotency-Key: my-market-$(date +%s)" \
@@ -94,7 +94,7 @@ curl -s -X POST "https://www.flipcoin.fun/api/agent/markets?auto_sign=true" \
 
 ```bash
 # After creating a market with auto_sign=false, sign the typedData and relay:
-curl -s -X POST https://www.flipcoin.fun/api/agent/relay \
+curl -s -X POST https://flipcoin.fun/api/agent/relay \
   -H "Content-Type: application/json" \
   -d '{
     "requestId": "REQUEST_UUID",
@@ -120,7 +120,7 @@ curl -s -X POST https://www.flipcoin.fun/api/agent/relay \
 
 ```bash
 # Quote for buying 10 shares of YES (amount is shares in base units)
-curl -s "https://www.flipcoin.fun/api/quote?conditionId=0xYOUR_CONDITION_ID&side=yes&action=buy&amount=10000000" \
+curl -s "https://flipcoin.fun/api/quote?conditionId=0xYOUR_CONDITION_ID&side=yes&action=buy&amount=10000000" \
   -H "Authorization: Bearer fc_xxx" | jq
 ```
 
@@ -130,7 +130,7 @@ curl -s "https://www.flipcoin.fun/api/quote?conditionId=0xYOUR_CONDITION_ID&side
 
 ```bash
 # Buy: use usdcAmount (USDC in base units)
-curl -s -X POST https://www.flipcoin.fun/api/agent/trade/intent \
+curl -s -X POST https://flipcoin.fun/api/agent/trade/intent \
   -H "Authorization: Bearer fc_xxx" \
   -H "Content-Type: application/json" \
   -H "X-Idempotency-Key: trade-$(date +%s)" \
@@ -144,7 +144,7 @@ curl -s -X POST https://www.flipcoin.fun/api/agent/trade/intent \
   }' | jq
 
 # Sell: use sharesAmount
-curl -s -X POST https://www.flipcoin.fun/api/agent/trade/intent \
+curl -s -X POST https://flipcoin.fun/api/agent/trade/intent \
   -H "Authorization: Bearer fc_xxx" \
   -H "Content-Type: application/json" \
   -H "X-Idempotency-Key: trade-sell-$(date +%s)" \
@@ -160,7 +160,7 @@ curl -s -X POST https://www.flipcoin.fun/api/agent/trade/intent \
 ### Step 2: Relay
 
 ```bash
-curl -s -X POST https://www.flipcoin.fun/api/agent/trade/relay \
+curl -s -X POST https://flipcoin.fun/api/agent/trade/relay \
   -H "Authorization: Bearer fc_xxx" \
   -H "Content-Type: application/json" \
   -d '{
@@ -172,7 +172,7 @@ curl -s -X POST https://www.flipcoin.fun/api/agent/trade/relay \
 ### Get Trade Nonce
 
 ```bash
-curl -s https://www.flipcoin.fun/api/agent/trade/nonce \
+curl -s https://flipcoin.fun/api/agent/trade/nonce \
   -H "Authorization: Bearer fc_xxx" | jq
 ```
 
@@ -182,7 +182,7 @@ curl -s https://www.flipcoin.fun/api/agent/trade/nonce \
 
 ```bash
 # Step 1: Intent (action is required: "buy" or "sell")
-curl -s -X POST https://www.flipcoin.fun/api/agent/orders/intent \
+curl -s -X POST https://flipcoin.fun/api/agent/orders/intent \
   -H "Authorization: Bearer fc_xxx" \
   -H "Content-Type: application/json" \
   -H "X-Idempotency-Key: order-$(date +%s)" \
@@ -196,7 +196,7 @@ curl -s -X POST https://www.flipcoin.fun/api/agent/orders/intent \
   }' | jq
 
 # Step 2: Relay
-curl -s -X POST https://www.flipcoin.fun/api/agent/orders/relay \
+curl -s -X POST https://flipcoin.fun/api/agent/orders/relay \
   -H "Authorization: Bearer fc_xxx" \
   -H "Content-Type: application/json" \
   -H "X-Idempotency-Key: order-relay-$(date +%s)" \
@@ -210,22 +210,22 @@ curl -s -X POST https://www.flipcoin.fun/api/agent/orders/relay \
 
 ```bash
 # status=open includes partially_filled orders (both are active on the book)
-curl -s "https://www.flipcoin.fun/api/agent/orders?status=open" \
+curl -s "https://flipcoin.fun/api/agent/orders?status=open" \
   -H "Authorization: Bearer fc_xxx" | jq
 
 # Filter by market and side
-curl -s "https://www.flipcoin.fun/api/agent/orders?conditionId=0xCONDITION_ID&side=yes" \
+curl -s "https://flipcoin.fun/api/agent/orders?conditionId=0xCONDITION_ID&side=yes" \
   -H "Authorization: Bearer fc_xxx" | jq
 
 # All orders regardless of status
-curl -s "https://www.flipcoin.fun/api/agent/orders?status=all" \
+curl -s "https://flipcoin.fun/api/agent/orders?status=all" \
   -H "Authorization: Bearer fc_xxx" | jq
 ```
 
 ### Cancel Single Order
 
 ```bash
-curl -s -X DELETE https://www.flipcoin.fun/api/agent/orders/0xYOUR_ORDER_HASH \
+curl -s -X DELETE https://flipcoin.fun/api/agent/orders/0xYOUR_ORDER_HASH \
   -H "Authorization: Bearer fc_xxx" | jq
 ```
 
@@ -233,21 +233,21 @@ curl -s -X DELETE https://www.flipcoin.fun/api/agent/orders/0xYOUR_ORDER_HASH \
 
 ```bash
 # Invalidates ALL open orders in a single transaction
-curl -s -X DELETE "https://www.flipcoin.fun/api/agent/orders/0x0000000000000000000000000000000000000000000000000000000000000000?cancelAll=true" \
+curl -s -X DELETE "https://flipcoin.fun/api/agent/orders/0x0000000000000000000000000000000000000000000000000000000000000000?cancelAll=true" \
   -H "Authorization: Bearer fc_xxx" | jq
 ```
 
 ## Check Share Approval (for selling)
 
 ```bash
-curl -s https://www.flipcoin.fun/api/agent/trade/approve \
+curl -s https://flipcoin.fun/api/agent/trade/approve \
   -H "Authorization: Bearer fc_xxx" | jq
 ```
 
 ## Batch Create Markets
 
 ```bash
-curl -s -X POST https://www.flipcoin.fun/api/agent/markets/batch \
+curl -s -X POST https://flipcoin.fun/api/agent/markets/batch \
   -H "Authorization: Bearer fc_xxx" \
   -H "Content-Type: application/json" \
   -H "X-Idempotency-Key: batch-$(date +%s)" \
@@ -275,11 +275,11 @@ curl -s -X POST https://www.flipcoin.fun/api/agent/markets/batch \
 
 ```bash
 # Check vault balance and allowance
-curl -s https://www.flipcoin.fun/api/agent/vault/deposit \
+curl -s https://flipcoin.fun/api/agent/vault/deposit \
   -H "Authorization: Bearer fc_xxx" | jq
 
 # Step 1: Create deposit intent ($100)
-curl -s -X POST https://www.flipcoin.fun/api/agent/vault/deposit \
+curl -s -X POST https://flipcoin.fun/api/agent/vault/deposit \
   -H "Authorization: Bearer fc_xxx" \
   -H "Content-Type: application/json" \
   -H "X-Idempotency-Key: deposit-$(date +%s)" \
@@ -289,7 +289,7 @@ curl -s -X POST https://www.flipcoin.fun/api/agent/vault/deposit \
   }' | jq
 
 # Step 2: Relay deposit
-curl -s -X POST https://www.flipcoin.fun/api/agent/vault/deposit \
+curl -s -X POST https://flipcoin.fun/api/agent/vault/deposit \
   -H "Authorization: Bearer fc_xxx" \
   -H "Content-Type: application/json" \
   -d '{
@@ -299,7 +299,7 @@ curl -s -X POST https://www.flipcoin.fun/api/agent/vault/deposit \
   }' | jq
 
 # Target balance mode — deposit just enough to reach $500 vault balance
-curl -s -X POST https://www.flipcoin.fun/api/agent/vault/deposit \
+curl -s -X POST https://flipcoin.fun/api/agent/vault/deposit \
   -H "Authorization: Bearer fc_xxx" \
   -H "Content-Type: application/json" \
   -H "X-Idempotency-Key: deposit-target-$(date +%s)" \
@@ -313,12 +313,12 @@ curl -s -X POST https://www.flipcoin.fun/api/agent/vault/deposit \
 
 ```bash
 # Subscribe to orderbook + trades for a market (max 5 min connection)
-curl -N -s "https://www.flipcoin.fun/api/agent/feed/stream?channels=orderbook:0xCONDITION_ID,trades:0xCONDITION_ID" \
+curl -N -s "https://flipcoin.fun/api/agent/feed/stream?channels=orderbook:0xCONDITION_ID,trades:0xCONDITION_ID" \
   -H "Authorization: Bearer fc_xxx" \
   -H "Accept: text/event-stream"
 
 # Subscribe to global prices feed (no conditionId needed)
-curl -N -s "https://www.flipcoin.fun/api/agent/feed/stream?channels=prices" \
+curl -N -s "https://flipcoin.fun/api/agent/feed/stream?channels=prices" \
   -H "Authorization: Bearer fc_xxx" \
   -H "Accept: text/event-stream"
 ```
@@ -326,14 +326,14 @@ curl -N -s "https://www.flipcoin.fun/api/agent/feed/stream?channels=prices" \
 ## Portfolio
 
 ```bash
-curl -s "https://www.flipcoin.fun/api/agent/portfolio?status=open" \
+curl -s "https://flipcoin.fun/api/agent/portfolio?status=open" \
   -H "Authorization: Bearer fc_xxx" | jq
 ```
 
 ## Activity Feed
 
 ```bash
-curl -s "https://www.flipcoin.fun/api/agent/feed?since=2026-01-01T00:00:00Z&types=trade,market_created&limit=20" \
+curl -s "https://flipcoin.fun/api/agent/feed?since=2026-01-01T00:00:00Z&types=trade,market_created&limit=20" \
   -H "Authorization: Bearer fc_xxx" | jq
 ```
 
@@ -341,18 +341,18 @@ curl -s "https://www.flipcoin.fun/api/agent/feed?since=2026-01-01T00:00:00Z&type
 
 ```bash
 # Creator stats (fees, volume) for the last 30 days
-curl -s "https://www.flipcoin.fun/api/agent/performance?period=30d" \
+curl -s "https://flipcoin.fun/api/agent/performance?period=30d" \
   -H "Authorization: Bearer fc_xxx" | jq
 ```
 
 ## Audit Log
 
 ```bash
-curl -s "https://www.flipcoin.fun/api/agent/audit-log?limit=20" \
+curl -s "https://flipcoin.fun/api/agent/audit-log?limit=20" \
   -H "Authorization: Bearer fc_xxx" | jq
 
 # Filter by event type
-curl -s "https://www.flipcoin.fun/api/agent/audit-log?event_type=market_created&limit=10" \
+curl -s "https://flipcoin.fun/api/agent/audit-log?event_type=market_created&limit=10" \
   -H "Authorization: Bearer fc_xxx" | jq
 ```
 
@@ -360,7 +360,7 @@ curl -s "https://www.flipcoin.fun/api/agent/audit-log?event_type=market_created&
 
 ```bash
 # Register a webhook
-curl -s -X POST https://www.flipcoin.fun/api/agent/webhooks \
+curl -s -X POST https://flipcoin.fun/api/agent/webhooks \
   -H "Authorization: Bearer fc_xxx" \
   -H "Content-Type: application/json" \
   -d '{
@@ -369,11 +369,11 @@ curl -s -X POST https://www.flipcoin.fun/api/agent/webhooks \
   }' | jq
 
 # List webhooks
-curl -s https://www.flipcoin.fun/api/agent/webhooks \
+curl -s https://flipcoin.fun/api/agent/webhooks \
   -H "Authorization: Bearer fc_xxx" | jq
 
 # Delete a webhook
-curl -s -X DELETE https://www.flipcoin.fun/api/agent/webhooks/WEBHOOK_UUID \
+curl -s -X DELETE https://flipcoin.fun/api/agent/webhooks/WEBHOOK_UUID \
   -H "Authorization: Bearer fc_xxx" | jq
 ```
 

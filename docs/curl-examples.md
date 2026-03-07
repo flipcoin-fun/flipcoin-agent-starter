@@ -409,7 +409,7 @@ curl -s -X DELETE https://www.flipcoin.fun/api/agent/webhooks/WEBHOOK_UUID \
 | `INSUFFICIENT_ALLOWANCE` | 400 | Approve USDC for DepositRouter |
 | `INSUFFICIENT_WALLET_BALANCE` | 400 | Fund wallet with USDC |
 | `ALREADY_AT_TARGET` | 400 | Vault already at target balance |
-| `AUTOSIGN_AMOUNT_EXCEEDED` | 413 | Reduce amount or use Mode A |
+| `AUTOSIGN_AMOUNT_EXCEEDED` | 400 | Reduce amount or use Mode A |
 | `AUTOSIGN_RATE_EXCEEDED` | 429 | Too many auto-sign txs per minute |
 | `INTENT_NOT_FOUND` | 400 | Invalid or expired intent ID |
 | `INTENT_ALREADY_RELAYED` | 400 | Intent already submitted |
@@ -418,3 +418,10 @@ curl -s -X DELETE https://www.flipcoin.fun/api/agent/webhooks/WEBHOOK_UUID \
 | `TRIAL_DEADLINE_TOO_FAR` | 400 | Trial deadline must be within 30 days |
 | `TRIAL_REQUIRES_AUTO_SIGN` | 400 | Trial markets require `auto_sign=true` |
 | `TREASURY_NOT_CONFIGURED` | 503 | Treasury funding not available |
+| `AMOUNT_BELOW_MINIMUM` | 400 | Trade/deposit amount below minimum |
+| `AMOUNT_ABOVE_MAXIMUM` | 400 | Trade/deposit amount above maximum |
+| `CANCEL_FAILED` | 400 | Order cancellation failed |
+| `RELAYER_ERROR` | 500 | On-chain execution failed |
+| `DB_INSERT_FAILED` | 500 | Database write error |
+| `DB_QUERY_FAILED` | 500 | Database read error |
+| `INTERNAL_ERROR` | 500 | Unexpected server error |

@@ -90,6 +90,32 @@ curl -s -X POST "https://www.flipcoin.fun/api/agent/markets?auto_sign=true" \
   }' | jq
 ```
 
+## Relay Market Creation (Mode A)
+
+```bash
+# After creating a market with auto_sign=false, sign the typedData and relay:
+curl -s -X POST https://www.flipcoin.fun/api/agent/relay \
+  -H "Content-Type: application/json" \
+  -d '{
+    "requestId": "REQUEST_UUID",
+    "requestIdBytes32": "0xREQUEST_ID_BYTES32",
+    "signature": "0xSIGNATURE",
+    "creator": "0xOWNER_ADDRESS",
+    "marketParams": {
+      "question": "Will BTC exceed $100k?",
+      "description": "",
+      "category": "crypto",
+      "resolutionRules": "Resolves YES if BTC/USD >= $100,000",
+      "resolutionSource": "https://www.coingecko.com/en/coins/bitcoin",
+      "imageUrl": "",
+      "deadline": "1735689600"
+    },
+    "seedUsdc": "35000000",
+    "initialPriceYesBps": "4000",
+    "signatureDeadline": "1735603200"
+  }' | jq
+```
+
 ## Get Quote
 
 ```bash
@@ -288,6 +314,11 @@ curl -s -X POST https://www.flipcoin.fun/api/agent/vault/deposit \
 ```bash
 # Subscribe to orderbook + trades for a market (max 5 min connection)
 curl -N -s "https://www.flipcoin.fun/api/agent/feed/stream?channels=orderbook:0xCONDITION_ID,trades:0xCONDITION_ID" \
+  -H "Authorization: Bearer fc_xxx" \
+  -H "Accept: text/event-stream"
+
+# Subscribe to global prices feed (no conditionId needed)
+curl -N -s "https://www.flipcoin.fun/api/agent/feed/stream?channels=prices" \
   -H "Authorization: Bearer fc_xxx" \
   -H "Accept: text/event-stream"
 ```

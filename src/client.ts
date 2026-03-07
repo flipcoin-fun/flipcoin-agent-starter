@@ -1,5 +1,4 @@
 import type {
-  Market,
   MarketSummary,
   CreateMarketParams,
   CreateMarketResult,
@@ -49,6 +48,11 @@ import type {
 
 /** Convert human-readable USDC (e.g. 10) to raw 6-decimal string ("10000000") */
 export function usdcToRaw(amount: number): string {
+  return String(Math.round(amount * 1_000_000));
+}
+
+/** Convert human-readable shares (e.g. 10) to raw 6-decimal string ("10000000") */
+export function sharesToRaw(amount: number): string {
   return String(Math.round(amount * 1_000_000));
 }
 
@@ -238,6 +242,34 @@ export class FlipCoin {
   }
 
   /**
+   * Submit a signed market creation for on-chain execution (Mode A).
+   *
+   * After calling `createMarket({ autoSign: false })` and signing the returned EIP-712
+   * typed data with your wallet, submit the signature here to execute on-chain.
+   *
+   * @param requestId          Request ID from createMarket response
+   * @param requestIdBytes32   Bytes32 version of requestId (from typedData.relayerInfo)
+   * @param signature          EIP-712 signature from wallet
+   * @param creator            Owner wallet address
+   * @param marketParams       Market params (from typedData.relayerInfo.marketParams)
+   * @param seedUsdc           Seed USDC (from typedData.relayerInfo.seedUsdc)
+   * @param initialPriceYesBps Initial price (from typedData.relayerInfo.initialPriceYesBps)
+   * @param signatureDeadline  Signature deadline (from typedData.message.deadline)
+   */
+  async relay(params: {
+    requestId: string;
+    requestIdBytes32: string;
+    signature: string;
+    creator: string;
+    marketParams: Record<string, unknown>;
+    seedUsdc: string;
+    initialPriceYesBps: string;
+    signatureDeadline: string;
+  }): Promise<{ success: boolean; marketAddr: string; txHash: string }> {
+    return this.request("POST", "/api/agent/relay", { body: params });
+  }
+
+  /**
    * Create multiple markets in a single request.
    *
    * Returns EIP-712 typed data for manual signing (batch does not support auto_sign).
@@ -274,7 +306,7 @@ export class FlipCoin {
         conditionId,
         side,
         action,
-        amount: usdcToRaw(amount),
+        amount: sharesToRaw(amount),
       },
     });
   }
@@ -371,7 +403,7 @@ export class FlipCoin {
       side: params.side,
       action: params.action,
       priceBps: params.priceBps,
-      amount: usdcToRaw(params.amount),
+      amount: sharesToRaw(params.amount),
       timeInForce: params.timeInForce || "GTC",
     };
     if (params.expirationSeconds !== undefined) intentBody.expirationSeconds = params.expirationSeconds;
@@ -555,7 +587,7 @@ export class FlipCoin {
   /**
    * Open an authenticated SSE stream for real-time events.
    *
-   * Channels: "orderbook:{conditionId}", "trades:{conditionId}", "prices:{conditionId}"
+   * Channels: "orderbook:{conditionId}", "trades:{conditionId}", "prices" (global, no suffix).
    * Max connection: 5 minutes (reconnect on close).
    *
    * Returns an async iterable of SSE events.

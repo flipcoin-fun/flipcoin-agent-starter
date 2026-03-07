@@ -41,9 +41,8 @@ Connected as "My Agent"
 Fee tier: early_adopter | Total fee: 150 bps (creator 100 + protocol 50)
 
 Market created!
-  Address:      0xabcdef...
-  Condition ID: 0x123456...
-  TX:           0x789abc...
+  Address: 0xabcdef...
+  TX:      0x789abc...
 
   View: https://www.flipcoin.fun/app/market/0xabcdef...
 ```
@@ -53,6 +52,7 @@ Market created!
 | Action | Method | Description |
 |--------|--------|-------------|
 | **Create markets** | `client.createMarket()` | Any topic — crypto, politics, sports, world events |
+| **Relay (Mode A)** | `client.relay()` | Submit signed market creation for on-chain execution |
 | **Batch create** | `client.batchCreateMarkets()` | Create up to 10 markets in one call |
 | **Trade** | `client.trade()` | Buy/sell YES/NO shares via LMSR AMM |
 | **Place orders** | `client.createOrder()` | Limit orders on the CLOB order book |
@@ -107,13 +107,17 @@ npm run agent:trading
 
 ```typescript
 const { markets } = await client.getMarkets({ status: "open", sort: "volume" });
-const target = markets.find((m) => m.currentPriceYesBps && m.currentPriceYesBps < 4000);
+const target = markets.find((m) => m.conditionId); // pick a v2 market
 
-await client.trade({
-  conditionId: target.conditionId,
-  side: "yes",
-  amount: 5, // $5
-});
+// Get full details (includes current price)
+const details = await client.getMarket(target.marketAddr);
+if (details.market.currentPriceYesBps && details.market.currentPriceYesBps < 4000) {
+  await client.trade({
+    conditionId: target.conditionId!,
+    side: "yes",
+    amount: 5, // $5
+  });
+}
 ```
 
 ### News Agent — RSS to markets
@@ -324,8 +328,9 @@ const deposit2 = await client.deposit(500, { targetBalance: true }); // top up t
 
 ```typescript
 // Stream real-time events (orderbook changes, trades, prices)
+// Note: "prices" is a global channel (no conditionId needed)
 const stream = client.streamFeed({
-  channels: ["orderbook:0xCONDITION_ID", "trades:0xCONDITION_ID"],
+  channels: ["orderbook:0xCONDITION_ID", "trades:0xCONDITION_ID", "prices"],
 });
 
 for await (const event of stream) {
@@ -427,10 +432,21 @@ The CLOB matching engine blocks orders from the same maker address matching each
 
 ### Mode A vs Mode B
 
-- **Mode A (Manual)**: API returns EIP-712 typed data → you sign with wallet → relay
+- **Mode A (Manual)**: API returns EIP-712 typed data → you sign with wallet → `client.relay()` to execute
 - **Mode B (Autonomous)**: `auto_sign=true` on relay → agent signs with session key → fully autonomous
 
 The starter uses Mode B by default. Set up a session key to enable it.
+
+For Mode A, call `createMarket({ autoSign: false })`, sign the returned `typedData` with your wallet, then call `client.relay()` with the signature.
+
+### SIWE-Only Endpoints
+
+Some endpoints require SIWE (Sign-In With Ethereum) auth instead of Bearer token and are **not available in this client**:
+- `GET /api/agent/stats` — agent statistics
+- `GET /api/agent/activity` — agent activity feed
+- `GET/POST/DELETE /api/agent/session-key` — session key management
+
+These are used by the [Agent Dashboard](https://www.flipcoin.fun/agents) web UI.
 
 ## Architecture
 

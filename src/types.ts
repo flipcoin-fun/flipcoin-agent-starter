@@ -476,8 +476,9 @@ export interface BatchMarketItem {
   description?: string;
   category?: string;
   imageUrl?: string;
+  resolveStartAt?: string;
   resolveEndAt?: string;
-  liquidityTier?: "low" | "medium" | "high";
+  liquidityTier?: "trial" | "low" | "medium" | "high";
   initialPriceYesBps?: number;
   metadata?: AgentMetadata;
 }
@@ -789,6 +790,12 @@ export interface PortfolioResponse {
 
 export interface OrderCancelResponse {
   success: boolean;
+  /** Order hash (single cancel only, null for mass cancel) */
   orderHash?: string | null;
-  txHash: string;
+  /** On-chain transaction hash (single cancel only) */
+  txHash?: string | null;
+  /** true when mass cancel was performed (mass cancel only) */
+  cancelAll?: boolean;
+  /** Number of orders cancelled (mass cancel only) */
+  cancelledCount?: number;
 }

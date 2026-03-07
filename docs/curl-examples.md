@@ -207,7 +207,7 @@ curl -s -X DELETE https://www.flipcoin.fun/api/agent/orders/0xYOUR_ORDER_HASH \
 
 ```bash
 # Invalidates ALL open orders in a single transaction
-curl -s -X DELETE "https://www.flipcoin.fun/api/agent/orders/all?cancelAll=true" \
+curl -s -X DELETE "https://www.flipcoin.fun/api/agent/orders/_all?cancelAll=true" \
   -H "Authorization: Bearer fc_xxx" | jq
 ```
 

@@ -19,6 +19,7 @@ export interface MarketSummary {
   resolutionSource?: string | null;
   resolutionDate?: string | null;
   category?: string | null;
+  imageUrl?: string | null;
   fingerprint?: string;
 }
 
@@ -84,8 +85,6 @@ export interface CreateMarketResult {
   marketAddr?: string;
   /** Transaction hash (auto_sign only) */
   txHash?: string;
-  /** Condition ID (auto_sign only) */
-  conditionId?: string;
   /** EIP-712 typed data for manual signing (Mode A) */
   typedData?: EIP712TypedData;
 }
@@ -606,13 +605,16 @@ export interface ExploreResponse {
 }
 
 /** Response from GET /api/agent/markets (agent's own markets) */
+/** Response from GET /api/agent/markets (agent's own markets).
+ *  Note: pendingRequests uses raw DB column names (snake_case). */
 export interface AgentMarketsListResponse {
   markets: Market[];
   pendingRequests: Array<{
-    requestId: string;
-    title: string;
+    id: string;
+    idempotency_key: string;
     status: string;
-    createdAt: string;
+    created_at: string;
+    error_message?: string | null;
   }>;
 }
 

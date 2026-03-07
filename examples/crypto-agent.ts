@@ -99,7 +99,7 @@ function estimateInitialPrice(distance: number): number {
 
 async function main() {
   const me = await client.ping();
-  console.log(`Crypto Agent connected as "${me.agentName}"\n`);
+  console.log(`Crypto Agent connected as "${me.agent.name}"\n`);
 
   // 1. Fetch current prices
   console.log("Fetching crypto prices from CoinGecko...\n");
@@ -180,10 +180,6 @@ async function main() {
       if (!validation.valid) {
         console.log(`  Skipped: ${validation.issues.map((i) => i.message).join(", ")}\n`);
         continue;
-      }
-
-      if (validation.warnings.length > 0) {
-        console.log(`  Warnings: ${validation.warnings.join(", ")}`);
       }
 
       // Create

@@ -1,14 +1,17 @@
 import type {
   Market,
+  MarketSummary,
   CreateMarketParams,
   CreateMarketResult,
   ValidateResult,
   TradeParams,
+  TradeIntentResponse,
   TradeResult,
-  Quote,
+  QuoteResponse,
   OrderParams,
+  OrderIntentResponse,
   OrderResult,
-  Order,
+  ClobOrder,
   Position,
   PingResponse,
   ConfigResponse,
@@ -29,9 +32,14 @@ import type {
   CreateWebhookParams,
   BatchMarketItem,
   BatchResult,
-  DepositInfo,
+  VaultBalanceResponse,
   DepositResult,
   ApprovalStatus,
+  TradeNonceResponse,
+  MarketDetailsResponse,
+  PortfolioResponse,
+  Pagination,
+  OrderCancelResponse,
 } from "./types.js";
 
 // ─── Helpers ───────────────────────────────────────────────────
@@ -114,7 +122,7 @@ export class FlipCoin {
       const error = await res.json().catch(() => ({ message: res.statusText }));
       throw new FlipCoinError(
         res.status,
-        error.error || error.message || "Unknown error",
+        error.errorCode || error.error || error.message || "Unknown error",
         error,
       );
     }
@@ -124,39 +132,47 @@ export class FlipCoin {
 
   // ── Health & Config ────────────────────────────────────────
 
-  /** Health check — verifies API key and returns agent info */
+  /** Health check — verifies API key and returns agent info, rate limits, and fees */
   async ping(): Promise<PingResponse> {
     return this.request("GET", "/api/agent/ping");
   }
 
-  /** Platform config — contract addresses, fees, limits */
+  /** Platform config — contract addresses, fees, limits, capabilities */
   async getConfig(): Promise<ConfigResponse> {
     return this.request("GET", "/api/agent/config");
   }
 
   // ── Markets ────────────────────────────────────────────────
 
-  /** Explore all markets on the platform */
+  /**
+   * Explore all markets on the platform.
+   *
+   * Supports filtering by status, search, sorting, pagination,
+   * and advanced filters like fingerprint, creator, min volume, deadline range.
+   */
   async getMarkets(options?: GetMarketsOptions): Promise<ExploreResponse> {
     const params: Record<string, string> = {};
     if (options?.status) params.status = options.status;
     if (options?.sort) params.sort = options.sort;
     if (options?.search) params.search = options.search;
+    if (options?.fingerprint) params.fingerprint = options.fingerprint;
+    if (options?.createdByAgent) params.createdByAgent = options.createdByAgent;
+    if (options?.creatorAddr) params.creatorAddr = options.creatorAddr;
+    if (options?.minVolume) params.minVolume = String(options.minVolume);
+    if (options?.resolveEndBefore) params.resolveEndBefore = options.resolveEndBefore;
+    if (options?.resolveEndAfter) params.resolveEndAfter = options.resolveEndAfter;
     if (options?.limit) params.limit = String(options.limit);
     if (options?.offset) params.offset = String(options.offset);
     return this.request("GET", "/api/agent/markets/explore", { params });
   }
 
-  /** Get details for a single market */
-  async getMarket(address: string): Promise<{ market: Market }> {
+  /** Get full details for a single market, including recent trades and 24h stats */
+  async getMarket(address: string): Promise<MarketDetailsResponse> {
     return this.request("GET", `/api/agent/markets/${address}`);
   }
 
   /**
-   * Get LMSR state — prices, quantities, slippage curve.
-   *
-   * Returns raw on-chain LMSR parameters, analytics (skew, max loss),
-   * and a pre-computed slippage curve for common trade sizes.
+   * Get LMSR state — prices, quantities, analytics, slippage curve.
    */
   async getMarketState(address: string): Promise<MarketState> {
     return this.request("GET", `/api/agent/markets/${address}/state`);
@@ -231,25 +247,25 @@ export class FlipCoin {
   // ── Trading (LMSR via BackstopRouter) ──────────────────────
 
   /**
-   * Get a price quote for a trade.
+   * Get a price quote with smart routing (LMSR + CLOB).
    *
    * @param conditionId  Market condition ID
    * @param side         "yes" or "no"
    * @param action       "buy" or "sell"
-   * @param amount       USDC amount (human-readable, e.g. 10 = $10)
+   * @param shares       Number of shares (human-readable, e.g. 10 = 10 shares)
    */
   async getQuote(
     conditionId: string,
     side: "yes" | "no",
     action: "buy" | "sell",
-    amount: number,
-  ): Promise<Quote> {
+    shares: number,
+  ): Promise<QuoteResponse> {
     return this.request("GET", "/api/quote", {
       params: {
         conditionId,
         side,
         action,
-        amount: usdcToRaw(amount),
+        amount: usdcToRaw(shares),
       },
     });
   }
@@ -260,26 +276,37 @@ export class FlipCoin {
    * Combines intent + relay in one call using auto_sign.
    * Requires an active session key with on-chain delegation.
    *
-   * @param params.conditionId  Market condition ID
-   * @param params.side         "yes" or "no"
-   * @param params.action       "buy" (default) or "sell"
-   * @param params.amount       USDC amount (human-readable, e.g. 10 = $10)
-   * @param params.slippageBps  Max slippage (default 500 = 5%)
+   * @param params.conditionId   Market condition ID
+   * @param params.side          "yes" or "no"
+   * @param params.action        "buy" (default) or "sell"
+   * @param params.amount        USDC amount for buy, shares for sell (human-readable)
+   * @param params.maxSlippageBps  Max slippage (default: 100 = 1%)
+   * @param params.maxFeeBps     Max fee in bps
+   * @param params.venue         Execution venue (default: "auto")
    */
   async trade(params: TradeParams): Promise<TradeResult> {
+    const action = params.action || "buy";
+    const rawAmount = usdcToRaw(params.amount);
+
+    // Build intent body per OpenAPI spec
+    const intentBody: Record<string, unknown> = {
+      conditionId: params.conditionId,
+      side: params.side,
+      action,
+      ...(action === "sell"
+        ? { sharesAmount: rawAmount }
+        : { usdcAmount: rawAmount }),
+    };
+    if (params.maxSlippageBps !== undefined) intentBody.maxSlippageBps = params.maxSlippageBps;
+    if (params.maxFeeBps !== undefined) intentBody.maxFeeBps = params.maxFeeBps;
+    if (params.venue) intentBody.venue = params.venue;
+
     // Step 1: Create intent
-    const intent = await this.request<{ intentId: string }>(
+    const intent = await this.request<TradeIntentResponse>(
       "POST",
       "/api/agent/trade/intent",
       {
-        body: {
-          conditionId: params.conditionId,
-          side: params.side,
-          action: params.action || "buy",
-          amount: usdcToRaw(params.amount),
-          slippageBps: params.slippageBps || 500,
-          auto_sign: true,
-        },
+        body: intentBody,
         headers: {
           "X-Idempotency-Key": idempotencyKey("trade"),
         },
@@ -296,15 +323,20 @@ export class FlipCoin {
   }
 
   /**
+   * Get BackstopRouter nonce for the agent's signer address.
+   */
+  async getTradeNonce(): Promise<TradeNonceResponse> {
+    return this.request("GET", "/api/agent/trade/nonce");
+  }
+
+  /**
    * Check ShareToken approval status for selling shares.
    *
-   * Before selling via LMSR or CLOB, the owner must approve the operator contract
+   * Before selling via LMSR or CLOB, the owner must approve the operator contracts
    * (BackstopRouter for LMSR, Exchange for CLOB) for ERC-1155 transfers.
    */
-  async getApprovalStatus(conditionId: string): Promise<ApprovalStatus> {
-    return this.request("GET", "/api/agent/trade/approve", {
-      params: { conditionId },
-    });
+  async getApprovalStatus(): Promise<ApprovalStatus> {
+    return this.request("GET", "/api/agent/trade/approve");
   }
 
   // ── CLOB Orders (Exchange) ─────────────────────────────────
@@ -314,26 +346,34 @@ export class FlipCoin {
    *
    * Combines intent + relay in one call using auto_sign.
    *
-   * @param params.conditionId  Market condition ID
-   * @param params.side         "yes" or "no"
-   * @param params.priceBps     Limit price in bps (e.g. 4500 = $0.45)
-   * @param params.shares       Number of shares (human-readable, e.g. 10)
-   * @param params.timeInForce  "GTC" (default), "IOC", or "FOK"
+   * @param params.conditionId       Market condition ID
+   * @param params.side              "yes" or "no"
+   * @param params.action            "buy" or "sell"
+   * @param params.priceBps          Limit price in bps (e.g. 4500 = $0.45)
+   * @param params.amount            Number of shares (human-readable, e.g. 10)
+   * @param params.timeInForce       "GTC" (default), "IOC", or "FOK"
+   * @param params.expirationSeconds Order expiry in seconds (default: 7 days)
+   * @param params.maxFeeBps         Max fee in bps
    */
   async createOrder(params: OrderParams): Promise<OrderResult> {
+    // Build intent body per OpenAPI spec
+    const intentBody: Record<string, unknown> = {
+      conditionId: params.conditionId,
+      side: params.side,
+      action: params.action,
+      priceBps: params.priceBps,
+      amount: usdcToRaw(params.amount),
+      timeInForce: params.timeInForce || "GTC",
+    };
+    if (params.expirationSeconds !== undefined) intentBody.expirationSeconds = params.expirationSeconds;
+    if (params.maxFeeBps !== undefined) intentBody.maxFeeBps = params.maxFeeBps;
+
     // Step 1: Create intent
-    const intent = await this.request<{ intentId: string }>(
+    const intent = await this.request<OrderIntentResponse>(
       "POST",
       "/api/agent/orders/intent",
       {
-        body: {
-          conditionId: params.conditionId,
-          side: params.side,
-          priceBps: params.priceBps,
-          shares: usdcToRaw(params.shares),
-          timeInForce: params.timeInForce || "GTC",
-          auto_sign: true,
-        },
+        body: intentBody,
         headers: {
           "X-Idempotency-Key": idempotencyKey("order"),
         },
@@ -353,18 +393,28 @@ export class FlipCoin {
    * List your CLOB orders.
    *
    * Note: `status=open` includes `partially_filled` orders (both are active on the book).
-   * Use `status=partially_filled` to see only orders with partial fills (includes cancelled IOC with fills).
+   * Use `status=partially_filled` to see only orders with partial fills.
    */
   async getOrders(
-    status?: "open" | "partially_filled" | "filled" | "cancelled" | "all",
-  ): Promise<{ orders: Order[] }> {
+    options?: {
+      status?: "open" | "partially_filled" | "filled" | "cancelled" | "all";
+      conditionId?: string;
+      side?: "yes" | "no";
+      limit?: number;
+      offset?: number;
+    },
+  ): Promise<{ orders: ClobOrder[]; pagination: Pagination }> {
     const params: Record<string, string> = {};
-    if (status) params.status = status;
+    if (options?.status) params.status = options.status;
+    if (options?.conditionId) params.conditionId = options.conditionId;
+    if (options?.side) params.side = options.side;
+    if (options?.limit) params.limit = String(options.limit);
+    if (options?.offset) params.offset = String(options.offset);
     return this.request("GET", "/api/agent/orders", { params });
   }
 
   /** Cancel a single CLOB order by hash */
-  async cancelOrder(orderHash: string): Promise<{ success: boolean }> {
+  async cancelOrder(orderHash: string): Promise<OrderCancelResponse> {
     return this.request("DELETE", `/api/agent/orders/${orderHash}`);
   }
 
@@ -374,7 +424,7 @@ export class FlipCoin {
    * Increments the on-chain nonce, invalidating all outstanding orders
    * in a single transaction. More efficient than cancelling individually.
    */
-  async cancelAllOrders(): Promise<{ success: boolean }> {
+  async cancelAllOrders(): Promise<OrderCancelResponse> {
     return this.request("DELETE", "/api/agent/orders/all", {
       params: { cancelAll: "true" },
     });
@@ -382,10 +432,10 @@ export class FlipCoin {
 
   // ── Portfolio ──────────────────────────────────────────────
 
-  /** Get your open/closed positions */
+  /** Get your open/resolved positions with P&L */
   async getPortfolio(
-    status?: "open" | "closed" | "all",
-  ): Promise<{ positions: Position[] }> {
+    status?: "open" | "resolved" | "all",
+  ): Promise<PortfolioResponse> {
     const params: Record<string, string> = {};
     if (status) params.status = status;
     return this.request("GET", "/api/agent/portfolio", { params });
@@ -394,7 +444,7 @@ export class FlipCoin {
   // ── Analytics & Monitoring ─────────────────────────────────
 
   /**
-   * Creator performance — volume, fees, breakdown by category and market.
+   * Creator performance — fees earned, volume by source, breakdown by category and market.
    *
    * @param period  "7d" | "30d" | "90d" | "all" (default: "30d")
    */
@@ -440,7 +490,7 @@ export class FlipCoin {
   /**
    * Get vault balance, wallet balance, allowance, and recent deposits.
    */
-  async getDepositInfo(): Promise<DepositInfo> {
+  async getDepositInfo(): Promise<VaultBalanceResponse> {
     return this.request("GET", "/api/agent/vault/deposit");
   }
 
@@ -514,7 +564,7 @@ export class FlipCoin {
       const error = await res.json().catch(() => ({ message: res.statusText }));
       throw new FlipCoinError(
         res.status,
-        error.error || error.message || "SSE connection failed",
+        error.errorCode || error.error || error.message || "SSE connection failed",
         error,
       );
     }

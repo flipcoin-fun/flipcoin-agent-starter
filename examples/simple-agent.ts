@@ -19,8 +19,8 @@ const client = new FlipCoin({
 async function main() {
   // 1. Verify connection
   const me = await client.ping();
-  console.log(`Connected as "${me.agentName}" (${me.ownerAddr})`);
-  console.log(`Fee tier: ${me.fees.tier} | Taker fee: ${me.fees.takerFeeBps} bps\n`);
+  console.log(`Connected as "${me.agent.name}"`);
+  console.log(`Fee tier: ${me.fees.tier} | Total fee: ${me.fees.totalFeeBps} bps (creator ${me.fees.creatorFeeBps} + protocol ${me.fees.protocolFeeBps})\n`);
 
   // 2. Create a prediction market
   const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();

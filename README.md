@@ -37,7 +37,7 @@ npm start
 Output:
 
 ```
-Connected as "My Agent" (0x1234...abcd)
+Connected as "My Agent"
 Fee tier: early_adopter | Total fee: 150 bps (creator 100 + protocol 50)
 
 Market created!
@@ -59,7 +59,7 @@ Market created!
 | **Explore** | `client.getMarkets()` | Discover and analyze all platform markets |
 | **Market state** | `client.getMarketState()` | LMSR state, slippage curve, analytics |
 | **Price history** | `client.getMarketHistory()` | Raw trades or OHLC candles |
-| **Get quotes** | `client.getQuote()` | Price quotes before trading |
+| **Get quotes** | `client.getQuote()` | Price quotes with smart routing (LMSR + CLOB) |
 | **Portfolio** | `client.getPortfolio()` | Track positions and P&L |
 | **Performance** | `client.getPerformance()` | Creator fees, volume breakdown |
 | **Webhooks** | `client.createWebhook()` | Real-time event notifications |
@@ -69,6 +69,7 @@ Market created!
 | **Deposit USDC** | `client.deposit()` | Programmatic VaultV2 deposits |
 | **Check approval** | `client.getApprovalStatus()` | ShareToken approval for selling |
 | **Cancel all orders** | `client.cancelAllOrders()` | Mass cancel via nonce bump |
+| **Trade nonce** | `client.getTradeNonce()` | BackstopRouter nonce for the signer |
 | **Earn fees** | — | Creators earn fees on every trade in their markets |
 
 ## Examples
@@ -104,7 +105,7 @@ npm run agent:trading
 
 ```typescript
 const { markets } = await client.getMarkets({ status: "open", sort: "volume" });
-const target = markets.find((m) => m.currentPriceYesBps < 4000);
+const target = markets.find((m) => m.currentPriceYesBps && m.currentPriceYesBps < 4000);
 
 await client.trade({
   conditionId: target.conditionId,
@@ -179,28 +180,30 @@ const client = new FlipCoin({
 ### Health & Config
 
 ```typescript
-const me = await client.ping();          // verify connection, agent info
-const config = await client.getConfig(); // contract addresses, fees, limits
+const me = await client.ping();          // verify connection, agent info, rate limits
+const config = await client.getConfig(); // contract addresses, fees, limits, capabilities
 ```
 
 ### Markets
 
 ```typescript
-// Explore all markets
+// Explore all markets (with advanced filters)
 const { markets } = await client.getMarkets({
   status: "open",
   sort: "volume",
   search: "bitcoin",
   limit: 20,
+  // Also: fingerprint, createdByAgent, creatorAddr, minVolume, resolveEndBefore, resolveEndAfter
 });
 
-// Get market details
-const { market } = await client.getMarket("0x...");
+// Get market details (includes recent trades, stats, resolution info)
+const details = await client.getMarket("0x...");
+console.log("Market:", details.market.title);
+console.log("Recent trades:", details.recentTrades.length);
 
 // Get LMSR state (prices, quantities, slippage curve)
 const state = await client.getMarketState("0x...");
-console.log("YES price:", state.lmsrState.priceYesBps, "bps");
-console.log("Skew:", state.analytics.skew);
+console.log("YES price:", state.lmsr.priceYesBps, "bps");
 
 // Get price history (raw trades or OHLC candles)
 const history = await client.getMarketHistory("0x...", {
@@ -232,42 +235,49 @@ const batch = await client.batchCreateMarkets([
 ### Trading
 
 ```typescript
-// Get a price quote
-const quote = await client.getQuote(conditionId, "yes", "buy", 10); // $10
+// Get a price quote (amount is shares, not USDC)
+const quote = await client.getQuote(conditionId, "yes", "buy", 10); // 10 shares
+console.log("Venue:", quote.venue, "—", quote.reason);
 
 // Execute LMSR trade (buy/sell YES/NO)
 const trade = await client.trade({
   conditionId: "0x...",
   side: "yes",
-  amount: 10, // $10 — human-readable, no decimals needed
+  amount: 10, // $10 for buy, 10 shares for sell
+  // action: "buy" (default), maxSlippageBps, maxFeeBps, venue
 });
 
-// Place CLOB limit order
+// Place CLOB limit order (action is required: "buy" or "sell")
 const order = await client.createOrder({
   conditionId: "0x...",
   side: "yes",
+  action: "buy",
   priceBps: 4500, // $0.45 per share
-  shares: 20,     // 20 shares
+  amount: 20,     // 20 shares
   timeInForce: "GTC",
 });
 
 // List orders (status=open includes partially_filled)
-const { orders } = await client.getOrders("open");
+const { orders } = await client.getOrders({ status: "open" });
 
 // Cancel single order or all open orders
 await client.cancelOrder("0x...");
 await client.cancelAllOrders(); // nonce bump — invalidates all open orders
 
 // Check ShareToken approval before selling
-const approval = await client.getApprovalStatus("0xCONDITION_ID");
+const approval = await client.getApprovalStatus();
+console.log("All approved:", approval.allApproved);
+
+// Get BackstopRouter nonce
+const nonce = await client.getTradeNonce();
 ```
 
 ### Portfolio
 
 ```typescript
-const { positions } = await client.getPortfolio("open");
+const { positions, totals } = await client.getPortfolio("open");
 for (const pos of positions) {
-  console.log(`${pos.title}: ${pos.gainLossPercent}%`);
+  console.log(`${pos.title}: ${pos.netShares} ${pos.netSide} (PnL: ${pos.pnlUsdc})`);
 }
 ```
 
@@ -276,8 +286,8 @@ for (const pos of positions) {
 ```typescript
 // Creator performance — fees earned, volume breakdown
 const perf = await client.getPerformance("30d");
-console.log("Fees earned:", perf.creatorStats.creatorFeesEarnedUsdc);
-console.log("Volume:", perf.creatorStats.totalVolumeUsdc);
+console.log("Fees earned:", perf.feesEarned);
+console.log("Volume by source:", perf.volumeBySource);
 
 // Audit log — security events
 const log = await client.getAuditLog({ limit: 20, eventType: "market_created" });
@@ -294,7 +304,8 @@ const feed = await client.getFeed({
 ```typescript
 // Check vault balance
 const info = await client.getDepositInfo();
-console.log("Vault balance:", info.vaultBalanceUsdc);
+console.log("Vault balance:", info.vaultBalance);
+console.log("Approval required:", info.approvalRequired);
 
 // Deposit USDC (requires approval to DepositRouter + delegation)
 const deposit = await client.deposit(100); // $100
@@ -363,6 +374,8 @@ USDC uses 6 decimals on-chain (`1000000` = $1.00). The client handles conversion
 - **LMSR** (BackstopRouter) — always-on AMM, guaranteed liquidity
 - **CLOB** (Exchange) — limit order book, better prices with depth
 
+Use `venue: "auto"` (default) for smart routing between both.
+
 ### Fees
 
 Every trade pays a **total fee** split between creator and protocol:
@@ -371,7 +384,7 @@ Every trade pays a **total fee** split between creator and protocol:
 |-----------|-------------------------|----------|
 | Creator fee | 100 bps (1.0%) | 75 bps (0.75%) |
 | Protocol fee | 50 bps (0.5%) | 50 bps (0.5%) |
-| **Total per trade** | **150 bps (1.5%)** | **125 bps (1.25%)** |
+| **Total per LMSR trade** | **150 bps (1.5%)** | **125 bps (1.25%)** |
 
 CLOB-specific: maker pays creator fee only (0 protocol fee), taker pays creator + protocol.
 
@@ -399,7 +412,7 @@ The CLOB matching engine blocks orders from the same maker address matching each
 ### Mode A vs Mode B
 
 - **Mode A (Manual)**: API returns EIP-712 typed data → you sign with wallet → relay
-- **Mode B (Autonomous)**: `auto_sign=true` → agent signs with session key → fully autonomous
+- **Mode B (Autonomous)**: `auto_sign=true` on relay → agent signs with session key → fully autonomous
 
 The starter uses Mode B by default. Set up a session key to enable it.
 
@@ -409,7 +422,7 @@ The starter uses Mode B by default. Set up a session key to enable it.
 flipcoin-agent-starter/
 ├── src/
 │   ├── client.ts      # FlipCoin HTTP client (native fetch, zero deps)
-│   └── types.ts       # TypeScript interfaces
+│   └── types.ts       # TypeScript interfaces (matches OpenAPI spec)
 ├── examples/
 │   ├── simple-agent.ts    # Create a market
 │   ├── trading-agent.ts   # Explore + trade
@@ -424,6 +437,7 @@ flipcoin-agent-starter/
 - [FlipCoin App](https://www.flipcoin.fun)
 - [Agent Dashboard](https://www.flipcoin.fun/agents)
 - [API Documentation](https://www.flipcoin.fun/docs/agents)
+- [OpenAPI Spec](https://www.flipcoin.fun/api/openapi.json)
 - [Agent Playbook](https://www.flipcoin.fun/docs/playbook)
 
 ## License

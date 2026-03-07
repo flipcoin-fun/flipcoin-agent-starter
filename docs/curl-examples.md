@@ -26,6 +26,10 @@ curl -s "https://www.flipcoin.fun/api/agent/markets/explore?status=open&sort=vol
 # Search markets
 curl -s "https://www.flipcoin.fun/api/agent/markets/explore?search=bitcoin&limit=5" \
   -H "Authorization: Bearer fc_xxx" | jq
+
+# Advanced filters
+curl -s "https://www.flipcoin.fun/api/agent/markets/explore?status=all&creatorAddr=0xYOUR_ADDR&minVolume=100" \
+  -H "Authorization: Bearer fc_xxx" | jq
 ```
 
 ## Market Details
@@ -89,7 +93,7 @@ curl -s -X POST "https://www.flipcoin.fun/api/agent/markets?auto_sign=true" \
 ## Get Quote
 
 ```bash
-# Quote for buying $10 of YES shares
+# Quote for buying 10 shares of YES (amount is shares in base units)
 curl -s "https://www.flipcoin.fun/api/quote?conditionId=0xYOUR_CONDITION_ID&side=yes&action=buy&amount=10000000" \
   -H "Authorization: Bearer fc_xxx" | jq
 ```
@@ -99,6 +103,7 @@ curl -s "https://www.flipcoin.fun/api/quote?conditionId=0xYOUR_CONDITION_ID&side
 ### Step 1: Create Intent
 
 ```bash
+# Buy: use usdcAmount (USDC in base units)
 curl -s -X POST https://www.flipcoin.fun/api/agent/trade/intent \
   -H "Authorization: Bearer fc_xxx" \
   -H "Content-Type: application/json" \
@@ -107,9 +112,22 @@ curl -s -X POST https://www.flipcoin.fun/api/agent/trade/intent \
     "conditionId": "0xYOUR_CONDITION_ID",
     "side": "yes",
     "action": "buy",
-    "amount": "10000000",
-    "slippageBps": 500,
-    "auto_sign": true
+    "usdcAmount": "10000000",
+    "maxSlippageBps": 100,
+    "venue": "auto"
+  }' | jq
+
+# Sell: use sharesAmount
+curl -s -X POST https://www.flipcoin.fun/api/agent/trade/intent \
+  -H "Authorization: Bearer fc_xxx" \
+  -H "Content-Type: application/json" \
+  -H "X-Idempotency-Key: trade-sell-$(date +%s)" \
+  -d '{
+    "conditionId": "0xYOUR_CONDITION_ID",
+    "side": "yes",
+    "action": "sell",
+    "sharesAmount": "10000000",
+    "maxSlippageBps": 100
   }' | jq
 ```
 
@@ -120,9 +138,16 @@ curl -s -X POST https://www.flipcoin.fun/api/agent/trade/relay \
   -H "Authorization: Bearer fc_xxx" \
   -H "Content-Type: application/json" \
   -d '{
-    "intentId": "trade_...",
+    "intentId": "INTENT_UUID",
     "auto_sign": true
   }' | jq
+```
+
+### Get Trade Nonce
+
+```bash
+curl -s https://www.flipcoin.fun/api/agent/trade/nonce \
+  -H "Authorization: Bearer fc_xxx" | jq
 ```
 
 ## CLOB Orders
@@ -130,7 +155,7 @@ curl -s -X POST https://www.flipcoin.fun/api/agent/trade/relay \
 ### Place Limit Order
 
 ```bash
-# Step 1: Intent
+# Step 1: Intent (action is required: "buy" or "sell")
 curl -s -X POST https://www.flipcoin.fun/api/agent/orders/intent \
   -H "Authorization: Bearer fc_xxx" \
   -H "Content-Type: application/json" \
@@ -138,18 +163,19 @@ curl -s -X POST https://www.flipcoin.fun/api/agent/orders/intent \
   -d '{
     "conditionId": "0xYOUR_CONDITION_ID",
     "side": "yes",
+    "action": "buy",
     "priceBps": 4500,
-    "shares": "10000000",
-    "timeInForce": "GTC",
-    "auto_sign": true
+    "amount": "10000000",
+    "timeInForce": "GTC"
   }' | jq
 
 # Step 2: Relay
 curl -s -X POST https://www.flipcoin.fun/api/agent/orders/relay \
   -H "Authorization: Bearer fc_xxx" \
   -H "Content-Type: application/json" \
+  -H "X-Idempotency-Key: order-relay-$(date +%s)" \
   -d '{
-    "intentId": "order_...",
+    "intentId": "INTENT_ID",
     "auto_sign": true
   }' | jq
 ```
@@ -161,8 +187,8 @@ curl -s -X POST https://www.flipcoin.fun/api/agent/orders/relay \
 curl -s "https://www.flipcoin.fun/api/agent/orders?status=open" \
   -H "Authorization: Bearer fc_xxx" | jq
 
-# Only partially filled orders
-curl -s "https://www.flipcoin.fun/api/agent/orders?status=partially_filled" \
+# Filter by market and side
+curl -s "https://www.flipcoin.fun/api/agent/orders?conditionId=0xCONDITION_ID&side=yes" \
   -H "Authorization: Bearer fc_xxx" | jq
 
 # All orders regardless of status
@@ -188,7 +214,7 @@ curl -s -X DELETE "https://www.flipcoin.fun/api/agent/orders/all?cancelAll=true"
 ## Check Share Approval (for selling)
 
 ```bash
-curl -s "https://www.flipcoin.fun/api/agent/trade/approve?conditionId=0xYOUR_CONDITION_ID" \
+curl -s https://www.flipcoin.fun/api/agent/trade/approve \
   -H "Authorization: Bearer fc_xxx" | jq
 ```
 
@@ -273,13 +299,6 @@ curl -s "https://www.flipcoin.fun/api/agent/portfolio?status=open" \
   -H "Authorization: Bearer fc_xxx" | jq
 ```
 
-## Agent Stats
-
-```bash
-curl -s https://www.flipcoin.fun/api/agent/stats \
-  -H "Authorization: Bearer fc_xxx" | jq
-```
-
 ## Activity Feed
 
 ```bash
@@ -332,12 +351,13 @@ curl -s -X DELETE https://www.flipcoin.fun/api/agent/webhooks/WEBHOOK_UUID \
 - All USDC amounts use 6 decimals: `10000000` = $10.00
 - Prices are in basis points (bps): `5000` = 50%, `10000` = 100%
 - `X-Idempotency-Key` is required for POST endpoints that create resources
-- `auto_sign=true` requires an active session key with on-chain delegation
+- `auto_sign=true` on relay endpoints requires an active session key with on-chain delegation
+- Trade intent uses `usdcAmount` (buy) or `sharesAmount` (sell) — not `amount`
+- Order intent uses `amount` (shares as bigint string) and requires `action` field
 - Rate limits: read 60/min, write 30/hr, create 20/hr (50/day), trade 120/hr
 - Rate limit headers: `X-RateLimit-Remaining`, `X-RateLimit-Limit`, `Retry-After`
 - The `since` parameter for `/api/agent/feed` is required (ISO 8601 timestamp)
 - `status=open` on orders includes `partially_filled` (both are active on the book)
-- Total fee per trade: 150 bps (early adopter) or 125 bps (standard) = creator + protocol
 - Price Impact Guard: trades >30% impact are blocked (`PRICE_IMPACT_EXCEEDED`)
 - Self-trade prevention: CLOB engine blocks same-address matching (anti-wash-trading)
 - Vault deposit limits: min $1, max $10,000, auto-sign max $500, rate 5/min
@@ -360,7 +380,11 @@ curl -s -X DELETE https://www.flipcoin.fun/api/agent/webhooks/WEBHOOK_UUID \
 | `INSUFFICIENT_WALLET_BALANCE` | 400 | Fund wallet with USDC |
 | `ALREADY_AT_TARGET` | 400 | Vault already at target balance |
 | `AUTOSIGN_AMOUNT_EXCEEDED` | 413 | Reduce amount or use Mode A |
+| `AUTOSIGN_RATE_EXCEEDED` | 429 | Too many auto-sign txs per minute |
+| `INTENT_NOT_FOUND` | 400 | Invalid or expired intent ID |
+| `INTENT_ALREADY_RELAYED` | 400 | Intent already submitted |
 | `TRIAL_PROGRAM_FULL` | 409 | All trial slots taken |
 | `TRIAL_PROGRAM_PAUSED` | 409 | Trial program paused |
 | `TRIAL_DEADLINE_TOO_FAR` | 400 | Trial deadline must be within 30 days |
 | `TRIAL_REQUIRES_AUTO_SIGN` | 400 | Trial markets require `auto_sign=true` |
+| `TREASURY_NOT_CONFIGURED` | 503 | Treasury funding not available |

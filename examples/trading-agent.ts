@@ -6,7 +6,7 @@
  *
  * This agent:
  *  1. Fetches open markets sorted by volume
- *  2. Finds an underpriced market (YES < 40%)
+ *  2. Finds a market with details (prices, resolution info)
  *  3. Buys $5 of YES shares
  */
 
@@ -20,7 +20,7 @@ const client = new FlipCoin({
 
 async function main() {
   const me = await client.ping();
-  console.log(`Connected as "${me.agentName}"\n`);
+  console.log(`Connected as "${me.agent.name}"\n`);
 
   // 1. Explore open markets
   const { markets } = await client.getMarkets({
@@ -32,47 +32,53 @@ async function main() {
   console.log(`Found ${markets.length} open markets:\n`);
 
   for (const m of markets.slice(0, 10)) {
-    const yesPrice = (m.currentPriceYesBps / 100).toFixed(1);
-    const volume = rawToUsdc(m.volumeUsdc).toFixed(2);
-    console.log(`  ${yesPrice}% YES | $${volume} vol | ${m.title}`);
+    const volume = m.volumeUsdc.toFixed(2);
+    console.log(`  ${m.status} | $${volume} vol | ${m.title}`);
   }
 
-  // 2. Find an underpriced market (YES < 40%)
-  const target = markets.find((m) => m.currentPriceYesBps < 4000);
+  // 2. Find a market with conditionId (v2 markets)
+  const target = markets.find((m) => m.conditionId);
 
   if (!target) {
-    console.log("\nNo underpriced markets found. Try again later.");
+    console.log("\nNo tradeable v2 markets found. Try again later.");
     return;
   }
 
-  console.log(`\nTarget: "${target.title}"`);
-  console.log(`  YES price: ${(target.currentPriceYesBps / 100).toFixed(1)}%`);
-  console.log(`  Condition ID: ${target.conditionId}\n`);
+  // 3. Get full market details
+  const details = await client.getMarket(target.marketAddr);
+  const market = details.market;
 
-  // 3. Get a quote
-  const quote = await client.getQuote(target.conditionId, "yes", "buy", 5);
-  console.log(`Quote for $5 buy YES:`);
-  console.log(`  Shares: ${rawToUsdc(quote.shares).toFixed(2)}`);
-  console.log(`  Fee: $${rawToUsdc(quote.fee).toFixed(4)}`);
-  console.log(`  Price impact: ${quote.priceImpact} bps\n`);
+  console.log(`\nTarget: "${market.title}"`);
+  console.log(`  YES price: ${(market.currentPriceYesBps! / 100).toFixed(1)}%`);
+  console.log(`  Condition ID: ${market.conditionId}\n`);
 
-  // 4. Execute the trade
+  // 4. Get a quote (amount is shares)
+  const quote = await client.getQuote(market.conditionId!, "yes", "buy", 5);
+  console.log(`Quote for 5 shares buy YES:`);
+  console.log(`  Venue: ${quote.venue} — ${quote.reason}`);
+  if (quote.lmsr?.available) {
+    console.log(`  LMSR shares: ${rawToUsdc(quote.lmsr.sharesOut).toFixed(2)}`);
+    console.log(`  LMSR fee: $${rawToUsdc(quote.lmsr.fee).toFixed(4)}`);
+    console.log(`  Price impact: ${quote.lmsr.priceImpactBps} bps`);
+  }
+
+  // 5. Execute the trade
   const result = await client.trade({
-    conditionId: target.conditionId,
+    conditionId: market.conditionId!,
     side: "yes",
     amount: 5, // $5
   });
 
-  console.log("Trade executed!");
+  console.log("\nTrade executed!");
+  console.log(`  Status: ${result.status}`);
   console.log(`  TX: ${result.txHash}`);
-  console.log(`  Shares received: ${rawToUsdc(result.shares).toFixed(2)}`);
-  console.log(`  Price: ${(result.price / 100).toFixed(1)}%`);
+  if (result.sharesOut) console.log(`  Shares received: ${rawToUsdc(result.sharesOut).toFixed(2)}`);
 
-  // 5. Check portfolio
-  const { positions } = await client.getPortfolio("open");
-  console.log(`\nPortfolio: ${positions.length} open positions`);
-  for (const pos of positions.slice(0, 5)) {
-    console.log(`  ${pos.title}: ${pos.yesShares} YES / ${pos.noShares} NO (${pos.gainLossPercent > 0 ? "+" : ""}${pos.gainLossPercent.toFixed(1)}%)`);
+  // 6. Check portfolio
+  const portfolio = await client.getPortfolio("open");
+  console.log(`\nPortfolio: ${portfolio.positions.length} open positions`);
+  for (const pos of portfolio.positions.slice(0, 5)) {
+    console.log(`  ${pos.title}: ${pos.netShares} ${pos.netSide} (PnL: ${pos.pnlUsdc > 0 ? "+" : ""}${pos.pnlUsdc.toFixed(2)})`);
   }
 }
 

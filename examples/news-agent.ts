@@ -98,7 +98,7 @@ function headlineToMarket(item: Parser.Item) {
 
 async function main() {
   const me = await client.ping();
-  console.log(`News Agent connected as "${me.agentName}"\n`);
+  console.log(`News Agent connected as "${me.agent.name}"\n`);
 
   // 1. Fetch headlines from all RSS feeds
   console.log("Fetching news feeds...\n");

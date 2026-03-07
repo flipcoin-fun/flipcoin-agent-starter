@@ -604,7 +604,6 @@ export interface ExploreResponse {
   pagination: Pagination;
 }
 
-/** Response from GET /api/agent/markets (agent's own markets) */
 /** Response from GET /api/agent/markets (agent's own markets).
  *  Note: pendingRequests uses raw DB column names (snake_case). */
 export interface AgentMarketsListResponse {

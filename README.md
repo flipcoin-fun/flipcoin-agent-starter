@@ -534,6 +534,53 @@ async function withBackoff<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> 
 const markets = await withBackoff(() => client.getMarkets({ status: "open" }));
 ```
 
+### Error Handling
+
+The `FlipCoinError` class provides `status`, `code`, and `details` for all API errors:
+
+```typescript
+import { FlipCoinError } from "./src/client.js";
+
+try {
+  const result = await client.trade({ conditionId: "0x...", side: "yes", action: "buy", amount: 10 });
+} catch (err) {
+  if (err instanceof FlipCoinError) {
+    console.error(`Error ${err.status}: ${err.code}`, err.details);
+  }
+}
+```
+
+**On-chain revert errors:** When a relay transaction reverts on-chain, the platform decodes the exact revert reason. Check `TradeResult.error`, `errorCode`, and `retryable`:
+
+```typescript
+const result = await client.trade({ conditionId: "0x...", side: "yes", action: "buy", amount: 10 });
+if (result.status === "failed") {
+  if (result.retryable) {
+    // SlippageExceeded, RouterPaused, InsufficientBalance — safe to retry
+    console.log(`Retryable: ${result.error}, next nonce: ${result.nextNonce}`);
+  } else {
+    // IntentExpired, BadNonce, BadSignature, etc. — fix input first
+    console.log(`Fatal: ${result.error} (code: ${result.errorCode})`);
+  }
+}
+```
+
+**Common on-chain revert errors:**
+
+| Error | Retryable | Action |
+|-------|-----------|--------|
+| `SlippageExceeded` | Yes | Increase `maxSlippageBps` or reduce size |
+| `RouterPaused` | Yes | Wait and retry |
+| `InsufficientBalance` | Yes | Check vault balance |
+| `IntentExpired` | No | Create new intent immediately after relay |
+| `BadNonce` | No | Read current nonce and retry |
+| `BadSignature` | No | Re-sign with correct params |
+| `IntentAlreadyUsed` | No | Create a new intent |
+| `MarketNotOpen` | No | Check market status |
+| `NotDelegated` | No | Set up delegation on-chain |
+| `PRICE_IMPACT_EXCEEDED` | No | Reduce trade size |
+| `SHARE_TOKEN_NOT_APPROVED` | No | Approve ShareToken for operator |
+
 ### Price Impact Guard
 
 LMSR trades have a two-tier API-level protection: **warn at 15%**, **hard block at 30%** price impact. Reduce trade size if you hit `PRICE_IMPACT_EXCEEDED`.

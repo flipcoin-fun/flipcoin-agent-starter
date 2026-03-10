@@ -440,6 +440,8 @@ export interface GetFeedOptions {
   since: string;
   types?: string;
   limit?: number;
+  /** Pagination cursor from a previous FeedResponse */
+  cursor?: string;
 }
 
 // ─── Webhooks ─────────────────────────────────────────────────

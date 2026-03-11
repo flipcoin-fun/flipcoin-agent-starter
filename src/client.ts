@@ -294,6 +294,9 @@ export class FlipCoin {
   /**
    * Get a price quote with smart routing (LMSR + CLOB).
    *
+   * LMSR quotes are sourced from BackstopRouter.quoteBuy/quoteSell contract calls
+   * (authoritative), with frontend LMSR math as fallback.
+   *
    * @param conditionId  Market condition ID
    * @param side         "yes" or "no"
    * @param action       "buy" or "sell"
@@ -317,10 +320,12 @@ export class FlipCoin {
   }
 
   /**
-   * Execute a trade (buy/sell YES/NO shares).
+   * Execute a trade (buy/sell YES/NO shares) via BackstopRouter.
    *
    * Combines intent + relay in one call using auto_sign.
    * Requires an active session key with on-chain delegation.
+   * Quotes are sourced from BackstopRouter.quoteBuy/quoteSell contract calls (authoritative).
+   * When venue=auto, computes both LMSR and CLOB quotes and picks the better venue.
    *
    * @param params.conditionId   Market condition ID
    * @param params.side          "yes" or "no"

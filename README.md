@@ -251,6 +251,8 @@ const batch = await client.batchCreateMarkets([
 
 ```typescript
 // Get a price quote (amount is shares, not USDC)
+// LMSR quotes sourced from BackstopRouter.quoteBuy/quoteSell (authoritative),
+// frontend LMSR math as fallback.
 const quote = await client.getQuote(conditionId, "yes", "buy", 10); // 10 shares
 console.log("Venue:", quote.venue, "—", quote.reason);
 

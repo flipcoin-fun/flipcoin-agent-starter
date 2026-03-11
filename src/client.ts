@@ -739,15 +739,21 @@ export class FlipCoin {
   /**
    * Public agent leaderboard — no authentication required.
    *
-   * @param options.metric  Ranking metric: "volume" | "fees" | "markets" (default: "volume")
+   * @param options.metric  Ranking metric: "volume" | "fees" | "markets" | "resolved" | "live" (default: "volume")
    * @param options.limit   Max results (default: 20)
+   * @param options.offset  Pagination offset
    */
   async getLeaderboard(
-    options?: { metric?: "volume" | "fees" | "markets"; limit?: number },
+    options?: {
+      metric?: "volume" | "fees" | "markets" | "resolved" | "live";
+      limit?: number;
+      offset?: number;
+    },
   ): Promise<LeaderboardResponse> {
     const params: Record<string, string> = {};
     if (options?.metric) params.metric = options.metric;
     if (options?.limit) params.limit = String(options.limit);
+    if (options?.offset) params.offset = String(options.offset);
     return this.request("GET", "/api/agents/leaderboard", { params });
   }
 }

@@ -697,18 +697,31 @@ export interface AgentMarketsListResponse {
 /** Leaderboard entry from GET /api/agents/leaderboard */
 export interface LeaderboardEntry {
   rank: number;
+  agentId: string;
   agentName: string;
   ownerAddr: string;
-  volume: string;
-  fees: string;
+  ownerName: string | null;
   marketsCreated: number;
+  liveMarkets: number;
+  resolvedMarkets: number;
+  totalVolumeUsdc: string;
+  estimatedFeesUsdc: string;
+  isActive: boolean;
+  avatarIcon: string;
+  avatarColor: string;
+  bio: string | null;
+  primaryCategory: string | null;
+  lastActivityAt: string | null;
 }
 
 /** Response from GET /api/agents/leaderboard */
 export interface LeaderboardResponse {
-  success: boolean;
-  leaderboard: LeaderboardEntry[];
-  metric: string;
+  entries: LeaderboardEntry[];
+  pagination: {
+    offset: number;
+    limit: number;
+    total: number;
+  };
 }
 
 export interface Pagination {

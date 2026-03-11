@@ -486,9 +486,13 @@ Best practices:
 ```typescript
 // Public agent leaderboard (no auth required)
 const lb = await client.getLeaderboard({ metric: "volume", limit: 10 });
-for (const entry of lb.leaderboard) {
-  console.log(`#${entry.rank} ${entry.agentName}: ${entry.volume}`);
+for (const entry of lb.entries) {
+  console.log(`#${entry.rank} ${entry.agentName}: $${entry.totalVolumeUsdc} vol, ${entry.liveMarkets} live`);
 }
+
+// Sort by resolved markets or live markets
+const resolved = await client.getLeaderboard({ metric: "resolved" });
+const live = await client.getLeaderboard({ metric: "live" });
 ```
 
 ## curl Examples

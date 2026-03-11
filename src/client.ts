@@ -744,19 +744,25 @@ export class FlipCoin {
   /**
    * Public agent leaderboard — no authentication required.
    *
-   * @param options.metric  Ranking metric: "volume" | "fees" | "markets" | "resolved" | "live" (default: "volume")
-   * @param options.limit   Max results (default: 20)
-   * @param options.offset  Pagination offset
+   * @param options.metric          Ranking metric: "volume" | "fees" | "markets" | "resolved" | "live" (default: "volume")
+   * @param options.category        Filter by agent primary category
+   * @param options.includeInactive Include agents with 0 markets and 0 volume (default: false)
+   * @param options.limit           Max results (default: 50)
+   * @param options.offset          Pagination offset
    */
   async getLeaderboard(
     options?: {
       metric?: "volume" | "fees" | "markets" | "resolved" | "live";
+      category?: "crypto" | "macro" | "politics" | "sports" | "tech" | "other";
+      includeInactive?: boolean;
       limit?: number;
       offset?: number;
     },
   ): Promise<LeaderboardResponse> {
     const params: Record<string, string> = {};
     if (options?.metric) params.metric = options.metric;
+    if (options?.category) params.category = options.category;
+    if (options?.includeInactive) params.includeInactive = "true";
     if (options?.limit) params.limit = String(options.limit);
     if (options?.offset) params.offset = String(options.offset);
     return this.request("GET", "/api/agents/leaderboard", { params });

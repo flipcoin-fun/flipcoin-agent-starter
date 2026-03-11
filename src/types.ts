@@ -186,7 +186,7 @@ export interface QuoteResponse {
   reason: string;
   /** True if CLOB can only partially fill */
   mayPartialFill?: boolean;
-  /** Quote validity window (~6 seconds) */
+  /** Quote validity window (~12 seconds) */
   validUntil: string;
   splitLegs?: {
     clob: { shares: string; cost: string; avgPriceBps: number };
@@ -625,6 +625,7 @@ export interface RateLimitInfo {
   write: RateLimitBucket;
   create: RateLimitBucket;
   trade: RateLimitBucket;
+  autosign: RateLimitBucket;
   dailyMarkets: {
     remaining: number;
     limit: number;
@@ -680,6 +681,7 @@ export interface ConfigResponse {
   vault: {
     minDepositUsdc: string;
     maxDepositUsdc: string;
+    intentExpirySeconds: number;
   };
   units: {
     usdcDecimals: number;

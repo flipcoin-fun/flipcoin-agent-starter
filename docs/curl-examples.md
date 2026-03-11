@@ -118,6 +118,8 @@ curl -s -X POST https://flipcoin.fun/api/agent/relay \
 
 ## Get Quote
 
+LMSR quotes are sourced from `BackstopRouter.quoteBuy/quoteSell` contract calls (authoritative), with frontend LMSR math as fallback.
+
 ```bash
 # Quote for buying 10 shares of YES (amount is shares in base units)
 curl -s "https://flipcoin.fun/api/quote?conditionId=0xYOUR_CONDITION_ID&side=yes&action=buy&amount=10000000" \
@@ -125,6 +127,8 @@ curl -s "https://flipcoin.fun/api/quote?conditionId=0xYOUR_CONDITION_ID&side=yes
 ```
 
 ## Trade (LMSR)
+
+Quotes are sourced from `BackstopRouter.quoteBuy/quoteSell` contract calls (authoritative). When `venue=auto`, computes both LMSR and CLOB quotes and picks the better venue.
 
 ### Step 1: Create Intent
 

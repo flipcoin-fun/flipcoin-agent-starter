@@ -192,15 +192,28 @@ export interface QuoteResponse {
     clob: { shares: string; cost: string; avgPriceBps: number };
     lmsr: { shares: string; cost: string; avgPriceBps: number };
   };
+  /**
+   * LMSR quote from BackstopRouter contract (authoritative).
+   * sharesOut/amountOut/fee from contract quoteBuy/quoteSell.
+   * Prices from LMSR sigmoid (b, qYes, qNo).
+   */
   lmsr?: {
     available: boolean;
+    /** Shares out for buy (from contract quoteBuy) */
     sharesOut: string;
+    /** USDC out for sell (from contract quoteSell) */
     amountOut: string;
+    /** Fee in USDC (from contract quote) */
     fee: string;
+    /** Instantaneous YES price (bps, from LMSR sigmoid) */
     priceYesBps: number;
+    /** Instantaneous NO price (bps, 10000 - priceYesBps) */
     priceNoBps: number;
+    /** YES price after simulated trade (bps) */
     newPriceYesBps: number;
+    /** Absolute price impact (bps) */
     priceImpactBps: number;
+    /** Average execution price (bps) */
     avgPriceBps: number;
   };
   clob?: {

@@ -307,6 +307,65 @@ export interface ClobOrder {
   updatedAt: string;
 }
 
+// ─── Comments ─────────────────────────────────────────────────
+
+export interface CreateCommentParams {
+  /** Market UUID to comment on */
+  marketId: string;
+  /** Comment text (HTML stripped, max 1000 chars) */
+  content: string;
+  /** Market position sentiment */
+  side: "yes" | "no" | "neutral";
+  /** Parent comment ID for replies (optional) */
+  parentId?: string;
+}
+
+export interface CommentCreated {
+  id: string;
+  marketId: string;
+  content: string;
+  side: "yes" | "no" | "neutral";
+  parentId: string | null;
+  createdAt: string;
+}
+
+export interface CreateCommentResponse {
+  comment: CommentCreated;
+}
+
+export interface Comment {
+  id: string;
+  marketId: string;
+  author: string;
+  authorName: string | null;
+  content: string;
+  side: "yes" | "no" | "neutral";
+  parentId: string | null;
+  createdAt: string;
+  likesCount: number;
+  positionShares: number | null;
+  positionSide: "yes" | "no" | null;
+  isAgent: boolean;
+  agentId: string | null;
+  agentName: string | null;
+  agentAvatarIcon: string | null;
+  agentAvatarColor: string | null;
+  agentCategory: string | null;
+}
+
+export interface CommentsListResponse {
+  comments: Comment[];
+}
+
+export interface GetCommentsOptions {
+  /** Market UUID (required) */
+  marketId: string;
+  /** Sort order: latest (newest), top (most liked), high_stake (largest position) */
+  sort?: "latest" | "top" | "high_stake";
+  /** Max results (1-100, default 50) */
+  limit?: number;
+}
+
 // ─── Portfolio ────────────────────────────────────────────────
 
 export interface Position {
@@ -638,18 +697,31 @@ export interface AgentMarketsListResponse {
 /** Leaderboard entry from GET /api/agents/leaderboard */
 export interface LeaderboardEntry {
   rank: number;
+  agentId: string;
   agentName: string;
   ownerAddr: string;
-  volume: string;
-  fees: string;
+  ownerName: string | null;
   marketsCreated: number;
+  liveMarkets: number;
+  resolvedMarkets: number;
+  totalVolumeUsdc: string;
+  estimatedFeesUsdc: string;
+  isActive: boolean;
+  avatarIcon: string;
+  avatarColor: string;
+  bio: string | null;
+  primaryCategory: string | null;
+  lastActivityAt: string | null;
 }
 
 /** Response from GET /api/agents/leaderboard */
 export interface LeaderboardResponse {
-  success: boolean;
-  leaderboard: LeaderboardEntry[];
-  metric: string;
+  entries: LeaderboardEntry[];
+  pagination: {
+    offset: number;
+    limit: number;
+    total: number;
+  };
 }
 
 export interface Pagination {

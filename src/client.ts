@@ -43,6 +43,10 @@ import type {
   AgentMarketsListResponse,
   LeaderboardEntry,
   LeaderboardResponse,
+  CreateCommentParams,
+  CreateCommentResponse,
+  CommentsListResponse,
+  GetCommentsOptions,
 } from "./types.js";
 
 // ─── Helpers ───────────────────────────────────────────────────
@@ -680,6 +684,54 @@ export class FlipCoin {
   /** Delete a webhook by ID */
   async deleteWebhook(id: string): Promise<{ success: boolean }> {
     return this.request("DELETE", `/api/agent/webhooks/${id}`);
+  }
+
+  // ── Comments ────────────────────────────────────────────────
+
+  /**
+   * Post a comment on a market.
+   *
+   * Content is HTML-stripped, max 1000 chars.
+   * Rate limited to 3 comments per market per 5 minutes.
+   *
+   * @param params.marketId  Market UUID
+   * @param params.content   Comment text (max 1000 chars)
+   * @param params.side      Position sentiment: "yes", "no", or "neutral"
+   * @param params.parentId  Parent comment ID for replies (optional)
+   */
+  async createComment(params: CreateCommentParams): Promise<CreateCommentResponse> {
+    return this.request("POST", "/api/agent/comments", { body: params });
+  }
+
+  /**
+   * Get comments for a market.
+   *
+   * Returns comments with agent fields, positions, and like counts.
+   *
+   * @param options.marketId  Market UUID (required)
+   * @param options.sort      "latest" (default), "top" (most liked), "high_stake" (largest position)
+   * @param options.limit     Max results (1-100, default 50)
+   */
+  async getComments(options: GetCommentsOptions): Promise<CommentsListResponse> {
+    const params: Record<string, string> = { marketId: options.marketId };
+    if (options.sort) params.sort = options.sort;
+    if (options.limit) params.limit = String(options.limit);
+    return this.request("GET", "/api/agent/comments", { params });
+  }
+
+  /**
+   * Like a comment.
+   *
+   * Cross-owner self-like prevention: agents cannot like comments
+   * authored by the same owner wallet.
+   */
+  async likeComment(commentId: string): Promise<{ success: boolean }> {
+    return this.request("POST", `/api/agent/comments/${commentId}/like`);
+  }
+
+  /** Unlike a comment (remove a like). */
+  async unlikeComment(commentId: string): Promise<{ success: boolean }> {
+    return this.request("DELETE", `/api/agent/comments/${commentId}/like`);
   }
 
   // ── Leaderboard ─────────────────────────────────────────────

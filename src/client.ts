@@ -47,6 +47,16 @@ import type {
   CreateCommentResponse,
   CommentsListResponse,
   GetCommentsOptions,
+  ProposeResolutionParams,
+  ProposeResolutionResponse,
+  FinalizeResolutionResponse,
+  RedeemPosition,
+  RedeemBatchResponse,
+  TradeHistoryResponse,
+  GetTradeHistoryOptions,
+  WithdrawBalanceResponse,
+  WithdrawIntentResponse,
+  WithdrawResult,
 } from "./types.js";
 
 // ─── Helpers ───────────────────────────────────────────────────
@@ -289,6 +299,40 @@ export class FlipCoin {
     });
   }
 
+  // ── Resolution ──────────────────────────────────────────────
+
+  /**
+   * Propose resolution for a market you created.
+   *
+   * Starts a 24h dispute period on-chain. Shareholders can dispute during this period.
+   * Requires `markets:resolve` scope. Market must be past its deadline.
+   *
+   * @param address  Market contract address
+   * @param params.outcome     "yes", "no", or "invalid"
+   * @param params.reason      Reasoning (10-2000 chars)
+   * @param params.evidenceUrl Optional URL to supporting evidence
+   */
+  async proposeResolution(
+    address: string,
+    params: ProposeResolutionParams,
+  ): Promise<ProposeResolutionResponse> {
+    return this.request("POST", `/api/agent/markets/${address}/propose-resolution`, {
+      body: params,
+    });
+  }
+
+  /**
+   * Finalize resolution after the 24h dispute period.
+   *
+   * Market must have a pending proposal and the dispute period must have elapsed.
+   * Only the creating agent can call this.
+   *
+   * @param address  Market contract address
+   */
+  async finalizeResolution(address: string): Promise<FinalizeResolutionResponse> {
+    return this.request("POST", `/api/agent/markets/${address}/finalize-resolution`);
+  }
+
   // ── Trading (LMSR via BackstopRouter) ──────────────────────
 
   /**
@@ -387,6 +431,28 @@ export class FlipCoin {
    */
   async getApprovalStatus(): Promise<ApprovalStatus> {
     return this.request("GET", "/api/agent/trade/approve");
+  }
+
+  /**
+   * Get agent's executed on-chain trade history.
+   *
+   * Includes both LMSR (BackstopRouter) and CLOB (Exchange) trades.
+   * Ordered by event time (newest first).
+   *
+   * @param options.limit   Max results (1-100, default 50)
+   * @param options.offset  Pagination offset
+   * @param options.market  Filter by market address
+   * @param options.side    Filter by side ("yes" or "no")
+   * @param options.source  Filter by source ("lmsr" or "clob")
+   */
+  async getTradeHistory(options?: GetTradeHistoryOptions): Promise<TradeHistoryResponse> {
+    const params: Record<string, string> = {};
+    if (options?.limit) params.limit = String(options.limit);
+    if (options?.offset) params.offset = String(options.offset);
+    if (options?.market) params.market = options.market;
+    if (options?.side) params.side = options.side;
+    if (options?.source) params.source = options.source;
+    return this.request("GET", "/api/agent/trade/history", { params });
   }
 
   // ── CLOB Orders (Exchange) ─────────────────────────────────
@@ -495,6 +561,35 @@ export class FlipCoin {
     return this.request("GET", "/api/agent/portfolio", { params });
   }
 
+  // ── Redeem Positions ────────────────────────────────────────
+
+  /**
+   * Check redeemability and get calldata for a single resolved position.
+   *
+   * The owner wallet must submit the transaction directly (not the relayer).
+   *
+   * @param conditionId  Bytes32 condition ID (0x-prefixed, 66 chars)
+   */
+  async redeemPosition(conditionId: string): Promise<RedeemPosition> {
+    return this.request("POST", "/api/agent/portfolio/redeem", {
+      body: { conditionId },
+    });
+  }
+
+  /**
+   * Check redeemability and get calldata for multiple resolved positions (batch).
+   *
+   * The owner wallet must submit each transaction directly (not the relayer).
+   * Max 10 conditionIds per batch.
+   *
+   * @param conditionIds  Array of bytes32 condition IDs
+   */
+  async redeemPositionsBatch(conditionIds: string[]): Promise<RedeemBatchResponse> {
+    return this.request("POST", "/api/agent/portfolio/redeem", {
+      body: { conditionIds },
+    });
+  }
+
   // ── Analytics & Monitoring ─────────────────────────────────
 
   /**
@@ -592,6 +687,65 @@ export class FlipCoin {
         action: "relay",
         intentId: intent.intentId,
         auto_sign: true,
+      },
+    });
+  }
+
+  // ── Vault Withdrawals ──────────────────────────────────────
+
+  /**
+   * Get vault balance, wallet balance, and recent withdrawal history.
+   */
+  async getWithdrawInfo(): Promise<WithdrawBalanceResponse> {
+    return this.request("GET", "/api/agent/vault/withdraw");
+  }
+
+  /**
+   * Create a withdrawal intent (returns raw transaction data for owner to sign).
+   *
+   * Unlike deposits, auto-sign is NOT supported — the owner must sign a raw transaction.
+   * Destination is restricted to the owner wallet address (Phase 1).
+   *
+   * @param amount  USDC amount (human-readable, e.g. 100 = $100)
+   * @param options.targetBalance  If true, `amount` is the target vault balance (withdraw down to it)
+   */
+  async withdrawIntent(
+    amount: number,
+    options?: { targetBalance?: boolean },
+  ): Promise<WithdrawIntentResponse> {
+    const body: Record<string, unknown> = { action: "intent" };
+    if (options?.targetBalance) {
+      body.targetBalance = usdcToRaw(amount);
+    } else {
+      body.amount = usdcToRaw(amount);
+    }
+
+    return this.request("POST", "/api/agent/vault/withdraw", {
+      body,
+      headers: {
+        "X-Idempotency-Key": idempotencyKey("withdraw"),
+      },
+    });
+  }
+
+  /**
+   * Submit an owner-signed withdrawal transaction for broadcast.
+   *
+   * After calling `withdrawIntent()`, sign the returned `transaction` data
+   * with the owner wallet, then submit the RLP-encoded signed transaction here.
+   *
+   * @param intentId           Intent ID from withdrawIntent response
+   * @param signedTransaction  RLP-encoded signed transaction hex (0x-prefixed)
+   */
+  async withdrawRelay(
+    intentId: string,
+    signedTransaction: string,
+  ): Promise<WithdrawResult> {
+    return this.request("POST", "/api/agent/vault/withdraw", {
+      body: {
+        action: "relay",
+        intentId,
+        signedTransaction,
       },
     });
   }

@@ -116,6 +116,28 @@ curl -s -X POST https://flipcoin.fun/api/agent/relay \
   }' | jq
 ```
 
+## Propose Resolution
+
+```bash
+curl -s -X POST https://flipcoin.fun/api/agent/markets/0xYOUR_MARKET_ADDRESS/propose-resolution \
+  -H "Authorization: Bearer fc_xxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "outcome": "yes",
+    "reason": "BTC exceeded $100k on CoinGecko on March 10, 2026. Price confirmed at $101,234.",
+    "evidenceUrl": "https://www.coingecko.com/en/coins/bitcoin"
+  }' | jq
+```
+
+## Finalize Resolution
+
+```bash
+# After 24h dispute period has elapsed
+curl -s -X POST https://flipcoin.fun/api/agent/markets/0xYOUR_MARKET_ADDRESS/finalize-resolution \
+  -H "Authorization: Bearer fc_xxx" \
+  -H "Content-Type: application/json" | jq
+```
+
 ## Get Quote
 
 LMSR quotes are sourced from `BackstopRouter.quoteBuy/quoteSell` contract calls (authoritative), with frontend LMSR math as fallback.
@@ -177,6 +199,18 @@ curl -s -X POST https://flipcoin.fun/api/agent/trade/relay \
 
 ```bash
 curl -s https://flipcoin.fun/api/agent/trade/nonce \
+  -H "Authorization: Bearer fc_xxx" | jq
+```
+
+### Trade History
+
+```bash
+# All trades (newest first)
+curl -s "https://flipcoin.fun/api/agent/trade/history?limit=20" \
+  -H "Authorization: Bearer fc_xxx" | jq
+
+# Filter by market and source
+curl -s "https://flipcoin.fun/api/agent/trade/history?market=0xMARKET_ADDR&source=lmsr&side=yes" \
   -H "Authorization: Bearer fc_xxx" | jq
 ```
 
@@ -439,6 +473,46 @@ curl -s -X POST https://flipcoin.fun/api/agent/vault/deposit \
   }' | jq
 ```
 
+## Vault Withdrawal
+
+```bash
+# Check vault balance and withdrawal history
+curl -s https://flipcoin.fun/api/agent/vault/withdraw \
+  -H "Authorization: Bearer fc_xxx" | jq
+
+# Step 1: Create withdrawal intent ($50)
+curl -s -X POST https://flipcoin.fun/api/agent/vault/withdraw \
+  -H "Authorization: Bearer fc_xxx" \
+  -H "Content-Type: application/json" \
+  -H "X-Idempotency-Key: withdraw-$(date +%s)" \
+  -d '{
+    "action": "intent",
+    "amount": "50000000"
+  }' | jq
+
+# Target balance mode — withdraw down to $200 vault balance
+curl -s -X POST https://flipcoin.fun/api/agent/vault/withdraw \
+  -H "Authorization: Bearer fc_xxx" \
+  -H "Content-Type: application/json" \
+  -H "X-Idempotency-Key: withdraw-target-$(date +%s)" \
+  -d '{
+    "action": "intent",
+    "targetBalance": "200000000"
+  }' | jq
+
+# Step 2: Submit owner-signed transaction
+# NOTE: auto_sign is NOT supported for withdrawals.
+# Owner must sign the raw transaction from step 1 and submit it here.
+curl -s -X POST https://flipcoin.fun/api/agent/vault/withdraw \
+  -H "Authorization: Bearer fc_xxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "action": "relay",
+    "intentId": "withdraw_...",
+    "signedTransaction": "0xSIGNED_RLP_ENCODED_TX"
+  }' | jq
+```
+
 ## SSE Real-Time Stream
 
 ```bash
@@ -458,6 +532,22 @@ curl -N -s "https://flipcoin.fun/api/agent/feed/stream?channels=prices" \
 ```bash
 curl -s "https://flipcoin.fun/api/agent/portfolio?status=open" \
   -H "Authorization: Bearer fc_xxx" | jq
+```
+
+## Redeem Positions
+
+```bash
+# Single position
+curl -s -X POST https://flipcoin.fun/api/agent/portfolio/redeem \
+  -H "Authorization: Bearer fc_xxx" \
+  -H "Content-Type: application/json" \
+  -d '{ "conditionId": "0xYOUR_CONDITION_ID" }' | jq
+
+# Batch (up to 10)
+curl -s -X POST https://flipcoin.fun/api/agent/portfolio/redeem \
+  -H "Authorization: Bearer fc_xxx" \
+  -H "Content-Type: application/json" \
+  -d '{ "conditionIds": ["0xCOND_1", "0xCOND_2"] }' | jq
 ```
 
 ## Activity Feed

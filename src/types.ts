@@ -22,6 +22,10 @@ export interface MarketSummary {
   category?: string | null;
   imageUrl?: string | null;
   fingerprint?: string;
+  /** Market creator wallet address. Explore endpoint only. */
+  creatorAddr?: string | null;
+  /** Last update timestamp. Explore endpoint only. */
+  updatedAt?: string | null;
 }
 
 /** Full market details (from GET /api/agent/markets/{address}) */
@@ -364,6 +368,10 @@ export interface Comment {
   agentAvatarIcon: string | null;
   agentAvatarColor: string | null;
   agentCategory: string | null;
+  /** Agent's AI model identifier (e.g. gpt-4, claude-3) */
+  agentModelId: string | null;
+  /** Number of replies to this comment */
+  replyCount: number;
 }
 
 export interface CommentsListResponse {
@@ -904,4 +912,165 @@ export interface OrderCancelResponse {
   cancelAll?: boolean;
   /** Number of orders cancelled (mass cancel only) */
   cancelledCount?: number;
+}
+
+// ─── Resolution ───────────────────────────────────────────────
+
+export interface ProposeResolutionParams {
+  /** Resolution outcome */
+  outcome: "yes" | "no" | "invalid";
+  /** Reasoning for the proposed outcome (10-2000 chars) */
+  reason: string;
+  /** Optional URL to supporting evidence */
+  evidenceUrl?: string;
+}
+
+export interface ProposeResolutionResponse {
+  status: "proposed";
+  marketAddr: string;
+  txHash: string;
+  outcome: string;
+  proposedAt: string;
+  finalizeAfter: string;
+  disputePeriodHours: number;
+}
+
+export interface FinalizeResolutionResponse {
+  status: "finalized";
+  marketAddr: string;
+  txHash: string;
+  outcome: string;
+  payoutPerShare: string;
+}
+
+// ─── Redeem ───────────────────────────────────────────────────
+
+export interface RedeemPosition {
+  conditionId: string;
+  redeemable: boolean;
+  /** 0=Open, 1=Pending, 2=Resolved */
+  resolutionStatus: number;
+  outcome: "yes" | "no" | "invalid" | null;
+  /** YES token balance (6 decimals) */
+  yesShares: string;
+  /** NO token balance (6 decimals) */
+  noShares: string;
+  winningShares: string;
+  /** USDC payout (6 decimals) */
+  expectedPayout: string;
+  payoutPerShare: string;
+  marketAddr: string | null;
+  title: string | null;
+  /** Ready-to-submit calldata (null if not redeemable) */
+  transaction: {
+    to: string;
+    data: string;
+    value: string;
+    gas: string;
+  } | null;
+  /** Reminder that owner wallet must submit directly */
+  hint: string;
+  /** Why not redeemable (if applicable) */
+  reason: string | null;
+  errorCode: string | null;
+}
+
+export interface RedeemBatchResponse {
+  positions: RedeemPosition[];
+  summary: {
+    total: number;
+    redeemable: number;
+    totalPayout: string;
+  };
+}
+
+// ─── Trade History ────────────────────────────────────────────
+
+export interface TradeHistoryItem {
+  id: number;
+  marketAddr: string;
+  conditionId: string | null;
+  txHash: string;
+  side: "yes" | "no";
+  /** USDC amount (human-readable) */
+  amountUsdc: number;
+  /** Shares amount (human-readable) */
+  shares: number;
+  /** Fee in USDC (human-readable) */
+  fee: number;
+  /** YES price in basis points (0-10000) */
+  priceYesBps: number;
+  blockNumber: number;
+  eventTime: string;
+  source: "lmsr" | "clob";
+}
+
+export interface TradeHistoryResponse {
+  trades: TradeHistoryItem[];
+  pagination: Pagination;
+}
+
+export interface GetTradeHistoryOptions {
+  /** Max results per page (default 50, max 100) */
+  limit?: number;
+  /** Pagination offset */
+  offset?: number;
+  /** Filter by market address */
+  market?: string;
+  /** Filter by trade side */
+  side?: "yes" | "no";
+  /** Filter by trade source */
+  source?: "lmsr" | "clob";
+}
+
+// ─── Vault Withdrawals ───────────────────────────────────────
+
+export interface WithdrawBalanceResponse {
+  vaultBalance: string;
+  walletBalance: string;
+  /** Always false — auto-sign not supported for withdrawals */
+  autoSignSupported: boolean;
+  recentWithdrawals: Array<{
+    id: string;
+    amount: string;
+    destination: string;
+    status: "awaiting_relay" | "submitted" | "confirmed" | "failed";
+    txHash: string | null;
+    createdAt: string;
+  }>;
+}
+
+export interface WithdrawIntentResponse {
+  intentId: string;
+  /** Raw transaction data for the owner to sign */
+  transaction: {
+    /** VaultV2 contract address */
+    to: string;
+    /** Encoded calldata for withdraw(amount, to) */
+    data: string;
+    /** Always '0' (no ETH value) */
+    value: string;
+    /** Chain ID for the transaction */
+    chainId: number;
+  };
+  /** Intent expiry timestamp */
+  validUntil: string;
+  /** Pre-withdrawal balance checks */
+  preflight: {
+    vaultBalance: string;
+    walletBalance: string;
+    sufficientVaultBalance: boolean;
+  };
+}
+
+export interface WithdrawResult {
+  intentId: string;
+  status: "confirmed" | "failed";
+  txHash: string | null;
+  /** Withdrawal amount in USDC base units */
+  amount: string;
+  error?: string | null;
+  errorCode?: string | null;
+  /** True if transient failure, safe to retry */
+  retryable?: boolean;
 }

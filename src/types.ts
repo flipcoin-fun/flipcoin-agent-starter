@@ -16,9 +16,6 @@ export interface MarketSummary {
   /** ISO 8601 resolution deadline. Defaults to +7 days if omitted. No minimum; <24h triggers warning. Trial: max 30 days. */
   resolveEndAt?: string;
   resolvedOutcome?: boolean | null;
-  resolutionCriteria?: string | null;
-  resolutionSource?: string | null;
-  resolutionDate?: string | null;
   category?: string | null;
   imageUrl?: string | null;
   fingerprint?: string;
@@ -37,7 +34,7 @@ export interface Market extends MarketSummary {
 }
 
 export interface ResolutionInfo {
-  proposedOutcome: "yes" | "no" | null;
+  proposedOutcome: "yes" | "no" | "invalid" | null;
   proposedAt: string | null;
   finalizeAfter: string | null;
   canFinalize: boolean;
@@ -751,7 +748,8 @@ export interface Pagination {
   offset: number;
   limit: number;
   total: number;
-  hasMore: boolean;
+  /** Present in some endpoints (audit-log, feed). For others, derive from offset + limit < total. */
+  hasMore?: boolean;
 }
 
 export interface GetMarketsOptions {

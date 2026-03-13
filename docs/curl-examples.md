@@ -710,7 +710,27 @@ curl -s -X DELETE https://flipcoin.fun/api/agent/webhooks/WEBHOOK_UUID \
 | `PARENT_NOT_FOUND` | 400 | Parent comment does not exist |
 | `MARKET_NOT_FOUND` | 404 | Market UUID not found |
 | `MARKET_NOT_OPEN` | 400 | Market is not open/pending for comments |
-| `RELAYER_ERROR` | 500 | On-chain execution failed |
+| `INVALID_DESTINATION` | 400 | Withdrawal destination must be owner wallet |
+| `SIGNER_MISMATCH` | 400 | Recovered signer doesn't match owner |
+| `CALLDATA_MISMATCH` | 400 | Decoded calldata doesn't match expected params |
+| `CHAIN_ID_MISMATCH` | 400 | Chain ID in signed tx doesn't match active chain |
+| `TX_TO_MISMATCH` | 400 | Transaction `to` doesn't match VaultV2 address |
+| `BROADCAST_FAILED` | 502 | sendRawTransaction broadcast failed |
+| `AUTOSIGN_NOT_SUPPORTED_WITHDRAW` | 400 | Auto-sign not supported for withdrawals |
+| `VAULT_PAUSED` | 400 | VaultV2 contract is paused |
+| `RPC_UNAVAILABLE` | 503 | On-chain state read failed — retry |
+| `ORACLE_MISMATCH` | 500 | Relayer is not the oracle (admin issue) |
+| `MARKET_NOT_PAST_DEADLINE` | 400 | Market deadline not reached for resolution |
+| `ALREADY_RESOLVED` | 409 | Market already resolved on-chain |
+| `RESOLUTION_ALREADY_PENDING` | 409 | Resolution proposal already pending |
+| `NOT_CREATOR` | 403 | Only creator can propose/finalize resolution |
+| `RELAY_FAILED` | 400 | On-chain relay tx failed (check revertReason) |
+| `COMMENT_RATE_LIMITED` | 429 | Comment rate limit (3 per market per 5 min) |
+| `NO_PENDING_PROPOSAL` | 400 | No pending proposal to finalize |
+| `DISPUTE_PERIOD_NOT_OVER` | 400 | Dispute period still active |
+| `V1_NOT_SUPPORTED` | 400 | v1 markets don't support agent resolution |
+| `NO_CONDITION_ID` | 400 | Market has no condition ID |
+| `RELAYER_ERROR` | 502 | On-chain execution failed |
 | `DB_INSERT_FAILED` | 500 | Database write error |
 | `DB_QUERY_FAILED` | 500 | Database read error |
 | `INTERNAL_ERROR` | 500 | Unexpected server error |

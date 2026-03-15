@@ -16,9 +16,6 @@ export interface MarketSummary {
   /** ISO 8601 resolution deadline. Defaults to +7 days if omitted. No minimum; <24h triggers warning. Trial: max 30 days. */
   resolveEndAt?: string;
   resolvedOutcome?: boolean | null;
-  resolutionCriteria?: string | null;
-  resolutionSource?: string | null;
-  resolutionDate?: string | null;
   category?: string | null;
   imageUrl?: string | null;
   fingerprint?: string;
@@ -34,10 +31,15 @@ export interface Market extends MarketSummary {
   currentPriceNoBps?: number;
   agentMetadata?: AgentMetadata;
   resolution?: ResolutionInfo;
+  volumeBySource?: { backstop: string; clob: string; total: string };
+  lastActivityAt?: string | null;
+  resolveStartAt?: string | null;
+  resolvedAt?: string | null;
+  createdByAgentId?: string | null;
 }
 
 export interface ResolutionInfo {
-  proposedOutcome: "yes" | "no" | null;
+  proposedOutcome: "yes" | "no" | "invalid" | null;
   proposedAt: string | null;
   finalizeAfter: string | null;
   canFinalize: boolean;
@@ -652,18 +654,18 @@ export interface ConfigResponse {
   success: boolean;
   chainId: number;
   mode: "testnet" | "mainnet";
-  feeRecipientPolicy: string;
+  feeRecipientPolicy: "owner_wallet" | "session_key";
   contracts: {
-    v1: { factory: string; vault: string };
-    v2: {
-      factory: string;
-      vault: string;
-      exchange: string;
-      backstopRouter: string;
-      shareToken: string;
-      delegationRegistry: string;
-      depositRouter: string;
-    };
+    factoryV1?: string;
+    vaultV1?: string;
+    factoryV2?: string;
+    exchange?: string;
+    backstopRouter?: string;
+    shareToken?: string;
+    vaultV2?: string;
+    delegationRegistry?: string;
+    depositRouter?: string;
+    usdc?: string;
   };
   capabilities: {
     relay: boolean;
@@ -671,30 +673,63 @@ export interface ConfigResponse {
     sessionKeys: boolean;
     treasury: boolean;
     deposit: boolean;
+    withdraw?: boolean;
+    resolution?: boolean;
   };
   limits: {
     minTradeUsdc: string;
     maxTradeUsdc: string;
+    maxBatchSize?: number;
+    dailyMarketCapPerAgent?: number;
+    dailyMarketCapPerOwner?: number;
+    dailyTradesPerAgent?: number;
+    dailyTradesPerOwner?: number;
   };
   trading: {
-    venues: string[];
+    venues: ("lmsr" | "clob")[];
+    lmsr?: {
+      quoteValiditySeconds: number;
+      defaultSlippageBps: number;
+      defaultMaxFeeBps: number;
+    };
+    clob?: {
+      timeInForceOptions: ("GTC" | "IOC" | "FOK")[];
+      maxOrderDurationDays: number;
+    };
     autoSign: {
       maxTradeUsdc: string;
       maxTxPerMinute: number;
-      maxDepositUsdc: string;
-      maxDepositPerMinute: number;
     };
-    quoteValiditySeconds: number;
+    rateLimit?: {
+      sustained: string;
+      burst: string;
+    };
+  };
+  fees?: {
+    lmsrTradingFeeBps: number;
+    clobMakerFeeBps: number;
+    clobTakerFeeBps: number;
+    note?: string;
   };
   vault: {
     minDepositUsdc: string;
     maxDepositUsdc: string;
     intentExpirySeconds: number;
+    autoSign?: {
+      maxDepositUsdc: string;
+      maxTxPerMinute: number;
+    };
+    note?: string;
+    minWithdrawUsdc?: string;
+    maxWithdrawUsdc?: string;
+    withdrawIntentExpirySeconds?: number;
+    withdrawAutoSignSupported?: boolean;
+    withdrawNote?: string;
   };
   units: {
-    usdcDecimals: number;
-    priceUnit: string;
-    volumeDefinition: string;
+    price: string;
+    usdc: string;
+    volume: string;
   };
 }
 
@@ -751,7 +786,8 @@ export interface Pagination {
   offset: number;
   limit: number;
   total: number;
-  hasMore: boolean;
+  /** Present in some endpoints (audit-log, feed). For others, derive from offset + limit < total. */
+  hasMore?: boolean;
 }
 
 export interface GetMarketsOptions {

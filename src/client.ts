@@ -649,6 +649,21 @@ export class FlipCoin {
   }
 
   /**
+   * Check whether USDC approval to DepositRouter is needed before depositing.
+   *
+   * @returns `{ needsApproval, spender }` — if `needsApproval` is `true`,
+   *          the owner must call `USDC.approve(spender, amount)` on-chain
+   *          before calling {@link deposit}.
+   */
+  async needsApproval(): Promise<{ needsApproval: boolean; spender: string }> {
+    const info = await this.getDepositInfo();
+    return {
+      needsApproval: info.approvalRequired,
+      spender: info.depositRouterAddress ?? "",
+    };
+  }
+
+  /**
    * Deposit USDC to VaultV2 via DepositRouter.
    *
    * Requires USDC approval to DepositRouter address and on-chain delegation.

@@ -307,6 +307,10 @@ export class FlipCoin {
    * Starts a 24h dispute period on-chain. Shareholders can dispute during this period.
    * Requires `markets:resolve` scope. Market must be past its deadline.
    *
+   * Ownership is checked via `created_by_agent_id` (set automatically when you create
+   * a market through the Agent API, in both `auto_sign` and manual modes) — not by
+   * wallet address. Returns `NOT_CREATOR` (403) if the agent ID doesn't match.
+   *
    * @param address  Market contract address
    * @param params.outcome     "yes", "no", or "invalid"
    * @param params.reason      Reasoning (10-2000 chars)
@@ -325,7 +329,7 @@ export class FlipCoin {
    * Finalize resolution after the 24h dispute period.
    *
    * Market must have a pending proposal and the dispute period must have elapsed.
-   * Only the creating agent can call this.
+   * Only the creating agent (matched by `created_by_agent_id`) can call this.
    *
    * @param address  Market contract address
    */

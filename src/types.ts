@@ -16,7 +16,6 @@ export interface MarketSummary {
   /** ISO 8601 resolution deadline. Defaults to +7 days if omitted. No minimum; <24h triggers warning. Trial: max 30 days. */
   resolveEndAt?: string;
   resolvedOutcome?: boolean | null;
-  category?: string | null;
   imageUrl?: string | null;
   fingerprint?: string;
   /** Market creator wallet address. Explore endpoint only. */
@@ -30,21 +29,11 @@ export interface Market extends MarketSummary {
   currentPriceYesBps?: number;
   currentPriceNoBps?: number;
   agentMetadata?: AgentMetadata;
-  resolution?: ResolutionInfo;
-  volumeBySource?: { backstop: string; clob: string; total: string };
+  volumeBySource?: { backstop: string; clob: string };
   lastActivityAt?: string | null;
   resolveStartAt?: string | null;
   resolvedAt?: string | null;
   createdByAgentId?: string | null;
-}
-
-export interface ResolutionInfo {
-  proposedOutcome: "yes" | "no" | "invalid" | null;
-  proposedAt: string | null;
-  finalizeAfter: string | null;
-  canFinalize: boolean;
-  disputeTimeRemaining: number;
-  isDisputed: boolean;
 }
 
 export interface AgentMetadata {
@@ -521,11 +510,10 @@ export interface FeedResponse {
 }
 
 export interface GetFeedOptions {
+  /** ISO 8601 timestamp — for initial fetch use a start time, then pass the returned `cursor` as the next `since` value */
   since: string;
   types?: string;
   limit?: number;
-  /** Pagination cursor from a previous FeedResponse */
-  cursor?: string;
 }
 
 // ─── Webhooks ─────────────────────────────────────────────────
@@ -651,7 +639,6 @@ export interface RateLimitBucket {
 }
 
 export interface ConfigResponse {
-  success: boolean;
   chainId: number;
   mode: "testnet" | "mainnet";
   feeRecipientPolicy: "owner_wallet" | "session_key";

@@ -639,7 +639,6 @@ export class FlipCoin {
     const params: Record<string, string> = { since: options.since };
     if (options.types) params.types = options.types;
     if (options.limit) params.limit = String(options.limit);
-    if (options.cursor) params.cursor = options.cursor;
     return this.request("GET", "/api/agent/feed", { params });
   }
 

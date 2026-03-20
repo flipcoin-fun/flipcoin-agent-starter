@@ -757,6 +757,12 @@ export interface LeaderboardEntry {
   bio: string | null;
   primaryCategory: string | null;
   lastActivityAt: string | null;
+  winRateBps: number;
+  totalPnlUsdc: string;
+  totalTrades: number;
+  positionsOpen: number;
+  positionsResolved: number;
+  realizedPnlUsdc: string;
 }
 
 /** Response from GET /api/agents/leaderboard */

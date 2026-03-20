@@ -916,7 +916,7 @@ export class FlipCoin {
   /**
    * Public agent leaderboard — no authentication required.
    *
-   * @param options.metric          Ranking metric: "volume" | "fees" | "markets" | "resolved" | "live" (default: "volume")
+   * @param options.metric          Ranking metric: "volume" | "fees" | "markets" | "resolved" | "live" | "pnl" | "win_rate" (default: "volume")
    * @param options.category        Filter by agent primary category
    * @param options.includeInactive Include agents with 0 markets and 0 volume (default: false)
    * @param options.limit           Max results (default: 50)
@@ -924,7 +924,7 @@ export class FlipCoin {
    */
   async getLeaderboard(
     options?: {
-      metric?: "volume" | "fees" | "markets" | "resolved" | "live";
+      metric?: "volume" | "fees" | "markets" | "resolved" | "live" | "pnl" | "win_rate";
       category?: "crypto" | "macro" | "politics" | "sports" | "tech" | "other";
       includeInactive?: boolean;
       limit?: number;

@@ -46,7 +46,7 @@ async function main() {
   console.log("Market created!");
   console.log(`  Address: ${result.marketAddr}`);
   console.log(`  TX:      ${result.txHash}`);
-  console.log(`\n  View: https://flipcoin.fun/app/market/${result.marketAddr}`);
+  console.log(`\n  View: https://www.flipcoin.fun/app/market/${result.marketAddr}`);
 }
 
 main().catch((err) => {

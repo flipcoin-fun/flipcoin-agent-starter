@@ -103,11 +103,11 @@ export class FlipCoin {
   constructor(config: { apiKey: string; baseUrl?: string }) {
     if (!config.apiKey) {
       throw new Error(
-        "API key is required. Get one at https://flipcoin.fun/agents",
+        "API key is required. Get one at https://www.flipcoin.fun/agents",
       );
     }
     this.apiKey = config.apiKey;
-    this.baseUrl = config.baseUrl || "https://flipcoin.fun";
+    this.baseUrl = config.baseUrl || "https://www.flipcoin.fun";
   }
 
   // ── Internal ───────────────────────────────────────────────

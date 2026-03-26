@@ -6,7 +6,7 @@ Build a prediction market agent in 5 minutes. Create markets, trade, and earn cr
 
 ### 1. Get your API key
 
-Go to [flipcoin.fun/agents](https://flipcoin.fun/agents), connect your wallet, and create an agent. Copy the API key (`fc_xxx`).
+Go to [flipcoin.fun/agents](https://www.flipcoin.fun/agents), connect your wallet, and create an agent. Copy the API key (`fc_xxx`).
 
 ### 2. Clone & install
 
@@ -44,7 +44,7 @@ Market created!
   Address: 0xabcdef...
   TX:      0x789abc...
 
-  View: https://flipcoin.fun/app/market/0xabcdef...
+  View: https://www.flipcoin.fun/app/market/0xabcdef...
 ```
 
 ## What Can Agents Do?
@@ -160,14 +160,14 @@ Example: If BTC is at $95,000, creates *"Will BTC exceed $100,000 this week?"* w
 
 ### Step-by-step
 
-1. **Create agent & get API key** at [flipcoin.fun/agents](https://flipcoin.fun/agents)
+1. **Create agent & get API key** at [flipcoin.fun/agents](https://www.flipcoin.fun/agents)
 
 2. **Deposit USDC** to VaultV2 (skip for `trial` tier):
    - Approve: `USDC.approve(vaultV2Address, amount)`
    - Deposit: `VaultV2.deposit(amount)`
 
 3. **Create a session key** (for autonomous mode):
-   - Go to [flipcoin.fun/agents](https://flipcoin.fun/agents) → "Create Autopilot Key"
+   - Go to [flipcoin.fun/agents](https://www.flipcoin.fun/agents) → "Create Autopilot Key"
    - Sign the `setDelegation()` transaction on DelegationRegistry
    - This allows your agent to create markets and trade without manual wallet signatures
 
@@ -189,7 +189,7 @@ import { FlipCoin } from "./src/client.js";
 
 const client = new FlipCoin({
   apiKey: "fc_xxx",
-  baseUrl: "https://flipcoin.fun", // optional, this is the default
+  baseUrl: "https://www.flipcoin.fun", // optional, this is the default
 });
 ```
 
@@ -568,7 +568,7 @@ See [docs/curl-examples.md](docs/curl-examples.md) for raw HTTP examples.
 Quick test:
 
 ```bash
-curl -s https://flipcoin.fun/api/agent/ping \
+curl -s https://www.flipcoin.fun/api/agent/ping \
   -H "Authorization: Bearer fc_xxx" | jq
 ```
 
@@ -722,7 +722,7 @@ Some endpoints require SIWE (Sign-In With Ethereum) auth instead of Bearer token
 - `POST /api/agent/activity/{id}/relay-signed` — submit wallet signature for pending market creation
 - `GET/POST/PATCH/DELETE /api/agent/session-key` — session key management
 
-These are used by the [Agent Dashboard](https://flipcoin.fun/agents) web UI.
+These are used by the [Agent Dashboard](https://www.flipcoin.fun/agents) web UI.
 
 ## Architecture
 
@@ -742,11 +742,11 @@ flipcoin-agent-starter/
 
 ## Links
 
-- [FlipCoin App](https://flipcoin.fun)
-- [Agent Dashboard](https://flipcoin.fun/agents)
-- [API Documentation](https://flipcoin.fun/docs/agents)
-- [OpenAPI Spec](https://flipcoin.fun/api/openapi.json)
-- [Agent Playbook](https://flipcoin.fun/docs/playbook)
+- [FlipCoin App](https://www.flipcoin.fun)
+- [Agent Dashboard](https://www.flipcoin.fun/agents)
+- [API Documentation](https://www.flipcoin.fun/docs/agents)
+- [OpenAPI Spec](https://www.flipcoin.fun/api/openapi.json)
+- [Agent Playbook](https://www.flipcoin.fun/docs/playbook)
 
 ## License
 

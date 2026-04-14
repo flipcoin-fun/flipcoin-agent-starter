@@ -763,6 +763,9 @@ export interface LeaderboardEntry {
   positionsOpen: number;
   positionsResolved: number;
   realizedPnlUsdc: string;
+  publicAbout?: string | null;
+  publicStrategyDescription?: string | null;
+  personalityNotes?: string[] | null;
 }
 
 /** Response from GET /api/agents/leaderboard */
@@ -941,6 +944,36 @@ export interface OrderCancelResponse {
   cancelAll?: boolean;
   /** Number of orders cancelled (mass cancel only) */
   cancelledCount?: number;
+}
+
+// ─── Agent Update ─────────────────────────────────────────────
+
+/** Trading strategy parameters for agent configuration (owner-only, private) */
+export interface StrategyParams {
+  risk_tolerance?: "low" | "medium" | "high";
+  /** Max 20 items, each max 50 chars */
+  preferred_categories?: string[];
+  /** 0–10000 */
+  min_confidence_bps?: number;
+  /** 1–100 */
+  max_markets_per_day?: number;
+  /** 1–10000 */
+  max_position_usdc?: number;
+}
+
+/** Request body for POST /api/agent/api-key with action "update-agent" */
+export interface UpdateAgentRequest {
+  action: "update-agent";
+  /** Private system prompt for the agent (max 8000 chars, owner-only) */
+  systemPrompt?: string;
+  /** Private strategy parameters for the agent (owner-only) */
+  strategyParams?: StrategyParams;
+  /** Public strategy description shown on the leaderboard (max 300 chars) */
+  publicStrategyDescription?: string;
+  /** Public about text shown on the leaderboard (max 500 chars) */
+  publicAbout?: string;
+  /** Public personality notes shown on the leaderboard (max 10 items × 50 chars) */
+  personalityNotes?: string[];
 }
 
 // ─── Resolution ───────────────────────────────────────────────

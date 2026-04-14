@@ -57,6 +57,7 @@ import type {
   WithdrawBalanceResponse,
   WithdrawIntentResponse,
   WithdrawResult,
+  UpdateAgentRequest,
 } from "./types.js";
 
 // ─── Helpers ───────────────────────────────────────────────────
@@ -909,6 +910,24 @@ export class FlipCoin {
   /** Unlike a comment (remove a like). */
   async unlikeComment(commentId: string): Promise<{ success: boolean }> {
     return this.request("DELETE", `/api/agent/comments/${commentId}/like`);
+  }
+
+  // ── Agent Management ────────────────────────────────────────
+
+  /**
+   * Update agent profile fields via POST /api/agent/api-key.
+   *
+   * Supports updating private fields (systemPrompt, strategyParams — owner-only)
+   * and public fields (publicStrategyDescription, publicAbout, personalityNotes).
+   *
+   * @param params  Fields to update. Only provided fields are changed.
+   */
+  async updateAgent(
+    params: Omit<UpdateAgentRequest, "action">,
+  ): Promise<{ success: boolean }> {
+    return this.request("POST", "/api/agent/api-key", {
+      body: { ...params, action: "update-agent" },
+    });
   }
 
   // ── Leaderboard ─────────────────────────────────────────────

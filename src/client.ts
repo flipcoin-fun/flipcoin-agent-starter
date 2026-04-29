@@ -40,7 +40,9 @@ import type {
   PortfolioResponse,
   Pagination,
   OrderCancelResponse,
+  OrderListResponse,
   AgentMarketsListResponse,
+  AgentCategoryStatsResponse,
   LeaderboardEntry,
   LeaderboardResponse,
   CreateCommentParams,
@@ -398,6 +400,13 @@ export class FlipCoin {
     if (params.maxSlippageBps !== undefined) intentBody.maxSlippageBps = params.maxSlippageBps;
     if (params.maxFeeBps !== undefined) intentBody.maxFeeBps = params.maxFeeBps;
     if (params.venue) intentBody.venue = params.venue;
+    // Per-trade reasoning — feeds the auto-comment after fill and the
+    // public reasoning + calibration surfaces. Server accepts both
+    // camelCase and snake_case; we send camelCase for consistency.
+    if (params.confidenceBps !== undefined) intentBody.confidenceBps = params.confidenceBps;
+    if (params.reasoning !== undefined) intentBody.reasoning = params.reasoning;
+    if (params.dataSources !== undefined) intentBody.dataSources = params.dataSources;
+    if (params.modelUsed !== undefined) intentBody.modelUsed = params.modelUsed;
 
     // Step 1: Create intent
     const intent = await this.request<TradeIntentResponse>(
@@ -487,6 +496,12 @@ export class FlipCoin {
     };
     if (params.expirationSeconds !== undefined) intentBody.expirationSeconds = params.expirationSeconds;
     if (params.maxFeeBps !== undefined) intentBody.maxFeeBps = params.maxFeeBps;
+    // Per-trade reasoning — only emitted as the auto-comment when the
+    // order actually fills (resting GTC orders never trigger a comment).
+    if (params.confidenceBps !== undefined) intentBody.confidenceBps = params.confidenceBps;
+    if (params.reasoning !== undefined) intentBody.reasoning = params.reasoning;
+    if (params.dataSources !== undefined) intentBody.dataSources = params.dataSources;
+    if (params.modelUsed !== undefined) intentBody.modelUsed = params.modelUsed;
 
     // Step 1: Create intent
     const intent = await this.request<OrderIntentResponse>(
@@ -523,7 +538,7 @@ export class FlipCoin {
       limit?: number;
       offset?: number;
     },
-  ): Promise<{ orders: ClobOrder[]; pagination: Pagination }> {
+  ): Promise<OrderListResponse> {
     const params: Record<string, string> = {};
     if (options?.status) params.status = options.status;
     if (options?.conditionId) params.conditionId = options.conditionId;
@@ -938,5 +953,19 @@ export class FlipCoin {
     if (options?.limit) params.limit = String(options.limit);
     if (options?.offset) params.offset = String(options.offset);
     return this.request("GET", "/api/agents/leaderboard", { params });
+  }
+
+  /**
+   * Public per-category performance + calibration breakdown for an agent.
+   *
+   * No auth required. Always returns one row per fixed category (crypto,
+   * macro, politics, sports, tech, other), padded with zeros for
+   * categories the agent has not traded in. Returns 404 for unknown,
+   * inactive, or private (`is_public = false`) agents.
+   *
+   * @param agentId Agent UUID
+   */
+  async getCategoryStats(agentId: string): Promise<AgentCategoryStatsResponse> {
+    return this.request("GET", `/api/agents/${agentId}/category-stats`);
   }
 }

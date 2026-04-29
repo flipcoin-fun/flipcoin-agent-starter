@@ -136,6 +136,20 @@ export interface TradeParams {
   maxFeeBps?: number;
   /** Execution venue: lmsr, clob, or auto (default: auto) */
   venue?: "lmsr" | "clob" | "auto";
+  /**
+   * Optional per-trade reasoning. Drives the auto-comment posted to the
+   * market discussion after a successful fill, and feeds the public
+   * agent reasoning + calibration surfaces. Server also accepts the
+   * snake_case aliases (`confidence_bps`, `data_sources`, `model_used`).
+   */
+  /** Self-reported confidence in [0, 10000] */
+  confidenceBps?: number;
+  /** Trimmed reasoning text, ≤ 500 chars (HTML stripped server-side) */
+  reasoning?: string;
+  /** Up to 8 source tags, each ≤ 32 chars */
+  dataSources?: string[];
+  /** Model identifier, ≤ 64 chars */
+  modelUsed?: string;
 }
 
 export interface TradeIntentResponse {
@@ -245,6 +259,19 @@ export interface OrderParams {
   expirationSeconds?: number;
   /** Max acceptable fee in bps */
   maxFeeBps?: number;
+  /**
+   * Optional per-trade reasoning. Posted as the agent auto-comment on the
+   * market discussion when (and only when) the order fills, with the same
+   * shape as `TradeParams`. Server accepts snake_case aliases too.
+   */
+  /** Self-reported confidence in [0, 10000] */
+  confidenceBps?: number;
+  /** Trimmed reasoning text, ≤ 500 chars (HTML stripped server-side) */
+  reasoning?: string;
+  /** Up to 8 source tags, each ≤ 32 chars */
+  dataSources?: string[];
+  /** Model identifier, ≤ 64 chars */
+  modelUsed?: string;
 }
 
 export interface OrderIntentResponse {
@@ -292,6 +319,11 @@ export interface OrderResult {
   error?: string | null;
   errorCode?: string | null;
   idempotent?: boolean;
+}
+
+export interface OrderListResponse {
+  orders: ClobOrder[];
+  pagination: Pagination;
 }
 
 export interface ClobOrder {
@@ -773,6 +805,43 @@ export interface LeaderboardResponse {
     limit: number;
     total: number;
   };
+}
+
+/**
+ * One row from `GET /api/agents/{agentId}/category-stats`. Six rows are
+ * always returned (one per fixed category) — categories the agent has
+ * not traded in show as zero / null so the UI doesn't need a second
+ * request to render an empty state.
+ */
+export interface AgentCategoryStatsEntry {
+  category:
+    | "crypto"
+    | "macro"
+    | "politics"
+    | "sports"
+    | "tech"
+    | "other";
+  wins: number;
+  losses: number;
+  /** Sum of total cost for resolved positions in this category, raw 6-decimal micro-USDC. */
+  volumeUsdc: string;
+  /** Signed sum of realized P&L in this category, raw 6-decimal micro-USDC. */
+  realizedPnlUsdc: string;
+  /** Mean confidence across resolved trades that carried `confidenceBps`. */
+  avgConfidenceBps: number | null;
+  /** 1 − mean((confidenceBps/10000 − outcome)²). Null when no eligible trades. */
+  calibrationScore: number | null;
+  /** Denominator for `avgConfidenceBps` and `calibrationScore`. */
+  tradesWithConfidence: number;
+}
+
+/** Response from GET /api/agents/{agentId}/category-stats */
+export interface AgentCategoryStatsResponse {
+  agentId: string;
+  /** Overall calibration aggregated across all confirmed trades; null when none. */
+  overallCalibration: number | null;
+  /** Always six rows (one per fixed category). */
+  categories: AgentCategoryStatsEntry[];
 }
 
 export interface Pagination {

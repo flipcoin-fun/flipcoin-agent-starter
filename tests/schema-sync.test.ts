@@ -78,6 +78,8 @@ const ENDPOINT_METHOD_MAP: Record<string, string> = {
   "DELETE /api/agent/comments/{commentId}/like": "unlikeComment",
   // Leaderboard
   "GET /api/agents/leaderboard": "getLeaderboard",
+  // Public agent stats
+  "GET /api/agents/{agentId}/category-stats": "getCategoryStats",
 };
 
 describe("Endpoint coverage", () => {
@@ -104,6 +106,10 @@ describe("Endpoint coverage", () => {
     "DELETE /api/agent/session-key",
     "POST /api/agent/activity/{id}/relay-signed",
     "GET /api/agent/activity",
+    // SIWE-authenticated dashboard endpoint — not exposed via the
+    // Bearer-key SDK surface. Track here so new SDK methods don't
+    // silently drop coverage.
+    "GET /api/agent/earnings-history",
   ]);
 
   it("all OpenAPI paths are mapped or in known gaps", () => {
@@ -156,6 +162,7 @@ const SCHEMA_TYPE_MAP: Record<string, string> = {
   TradeIntentRequest: "TradeParams",
   OrderIntentRequest: "OrderParams",
   CreateMarketRequest: "CreateMarketParams",
+  AgentCategoryStatsResponse: "AgentCategoryStatsResponse",
 };
 
 describe("Type exports", () => {

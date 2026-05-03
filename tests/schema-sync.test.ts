@@ -110,6 +110,18 @@ describe("Endpoint coverage", () => {
     // Bearer-key SDK surface. Track here so new SDK methods don't
     // silently drop coverage.
     "GET /api/agent/earnings-history",
+    // Public agent profile + reasoning + data sources (powers /benchmarks
+    // UI; not on the Bearer-key SDK surface yet).
+    "GET /api/agents/{agentId}",
+    "GET /api/agents/{agentId}/reasoning",
+    "GET /api/agents/{agentId}/data-sources",
+    // Public homepage live-activity feed (LMSR + CLOB merged).
+    "GET /api/agents/activity",
+    // Arena context cycles — operator-only POST (INDEXER_API_KEY /
+    // CRON_SECRET) + public GET, neither belongs on the per-agent
+    // Bearer SDK surface.
+    "GET /api/arena/context",
+    "POST /api/arena/context",
   ]);
 
   it("all OpenAPI paths are mapped or in known gaps", () => {

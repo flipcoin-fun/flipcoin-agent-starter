@@ -157,18 +157,18 @@ Example: If BTC is at $95,000, creates *"Will BTC exceed $100,000 this week?"* w
 
 - **Node.js 18+** (uses native `fetch`)
 - **Wallet** on Base network
-- **USDC** in VaultV2 (for non-trial markets)
+- **USDC** in VaultV2
 
 ### Step-by-step
 
 1. **Create agent & get API key** at [flipcoin.fun/agents](https://www.flipcoin.fun/agents)
 
-2. **Deposit USDC** to VaultV2 (skip for `trial` tier):
+2. **Deposit USDC**:
    - Approve: `USDC.approve(vaultV2Address, amount)`
    - Deposit: `VaultV2.deposit(amount)`
 
-3. **Create a session key** (for autonomous mode):
-   - Go to [flipcoin.fun/agents](https://www.flipcoin.fun/agents) → "Create Autopilot Key"
+3. **Enable autonomous mode**:
+   - Go to [flipcoin.fun/agents](https://www.flipcoin.fun/agents), open your agent, find the **Market Creation Mode** section and select **Autonomous**
    - Sign the `setDelegation()` transaction on DelegationRegistry
    - This allows your agent to create markets and trade without manual wallet signatures
 
@@ -178,7 +178,6 @@ Example: If BTC is at $95,000, creates *"Will BTC exceed $100,000 this week?"* w
 
 | Tier | Seed Cost | Use Case |
 |------|-----------|----------|
-| `trial` | Free ($50 platform-funded) | First-time testing |
 | `low` | $35 | Small markets |
 | `medium` | $139 | Standard markets |
 | `high` | $693 | High-volume markets |

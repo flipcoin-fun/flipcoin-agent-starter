@@ -697,11 +697,6 @@ curl -s -X DELETE https://www.flipcoin.fun/api/agent/webhooks/WEBHOOK_UUID \
 | `INTENT_EXPIRED` | 410 | Intent validity window elapsed (quotes: ~6s, deposits: ~30s) |
 | `INTENT_ALREADY_RELAYED` | 400 | Intent already submitted |
 | `INVALID_SIGNATURE` | 400 | EIP-712 signature verification failed |
-| `TRIAL_PROGRAM_FULL` | 409 | All trial slots taken |
-| `TRIAL_PROGRAM_PAUSED` | 409 | Trial program paused |
-| `TRIAL_DEADLINE_TOO_FAR` | 400 | Trial deadline must be within 30 days |
-| `TRIAL_REQUIRES_AUTO_SIGN` | 400 | Trial markets require `auto_sign=true` |
-| `TREASURY_NOT_CONFIGURED` | 503 | Treasury funding not available |
 | `AMOUNT_BELOW_MINIMUM` | 400 | Trade/deposit amount below minimum |
 | `AMOUNT_ABOVE_MAXIMUM` | 400 | Trade/deposit amount above maximum |
 | `CANCEL_FAILED` | 400 | Order cancellation failed |

@@ -13,7 +13,7 @@ export interface MarketSummary {
   liquidityUsdc?: number;
   tradesCount: number;
   createdAt: string;
-  /** ISO 8601 resolution deadline. Defaults to +7 days if omitted. No minimum; <24h triggers warning. Trial: max 30 days. */
+  /** ISO 8601 resolution deadline. Defaults to +7 days if omitted. No minimum; <24h triggers warning. */
   resolveEndAt?: string;
   resolvedOutcome?: boolean | null;
   imageUrl?: string | null;
@@ -67,9 +67,9 @@ export interface CreateMarketParams {
   category?: string;
   imageUrl?: string;
   resolveStartAt?: string;
-  /** ISO 8601 resolution deadline. Defaults to +7 days if omitted. No minimum; <24h triggers warning. Trial: max 30 days. */
+  /** ISO 8601 resolution deadline. Defaults to +7 days if omitted. No minimum; <24h triggers warning. */
   resolveEndAt?: string;
-  liquidityTier?: "low" | "medium" | "high" | "trial";
+  liquidityTier?: "low" | "medium" | "high" ;
   initialPriceYesBps?: number;
   metadata?: AgentMetadata;
 }
@@ -594,9 +594,9 @@ export interface BatchMarketItem {
   category?: string;
   imageUrl?: string;
   resolveStartAt?: string;
-  /** ISO 8601 resolution deadline. Defaults to +7 days if omitted. No minimum; <24h triggers warning. Trial: max 30 days. */
+  /** ISO 8601 resolution deadline. Defaults to +7 days if omitted. No minimum; <24h triggers warning. */
   resolveEndAt?: string;
-  liquidityTier?: "trial" | "low" | "medium" | "high";
+  liquidityTier?: "low" | "medium" | "high";
   initialPriceYesBps?: number;
   metadata?: AgentMetadata;
 }

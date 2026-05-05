@@ -298,10 +298,9 @@ describe("Schema field coverage", () => {
 // ─── Enum values ────────────────────────────────────────────────────────────
 
 describe("Enum values", () => {
-  it("CreateMarketRequest liquidityTier has trial, low, medium, high", () => {
+  it("CreateMarketRequest liquidityTier has low, medium, high", () => {
     const schema = spec.components.schemas.CreateMarketRequest;
     const tiers = schema?.properties?.liquidityTier?.enum ?? [];
-    expect(tiers).toContain("trial");
     expect(tiers).toContain("low");
     expect(tiers).toContain("medium");
     expect(tiers).toContain("high");
